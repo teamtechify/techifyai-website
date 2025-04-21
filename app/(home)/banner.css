@@ -1,0 +1,63 @@
+.service-glow {
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50%;
+    height: 50%;
+    background: radial-gradient(ellipse at bottom, rgba(0, 200, 255, .4), transparent 70%);
+    filter: blur(100px);
+    animation: waveGlow 3s ease-in-out infinite alternate, pulseGlow 6s ease-in-out infinite alternate;
+    pointer-events: none;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    z-index: 0;
+  }
+  
+  @keyframes waveGlow {
+    0% {
+      transform: translate(-50%, 0) scaleX(1);
+    }
+    50% {
+      transform: translate(-52%, -3%) scaleX(1.05);
+    }
+    100% {
+      transform: translate(-48%, 0%) scaleX(0.95);
+    }
+  }
+  
+  @keyframes pulseGlow {
+    0% {
+      opacity: 0.3;
+    }
+    100% {
+      opacity: .6;
+    }
+  }
+  
+
+  .parent:hover .service-glow {
+    animation: waveGlowHover 3s ease-in-out infinite alternate, pulseGlowHover 4s ease-in-out infinite alternate;
+    background: radial-gradient(ellipse at bottom, rgba(0, 200, 255, .8), transparent 80%);
+  }
+  
+  /* Hover-specific animations */
+  @keyframes waveGlowHover {
+    0% {
+      transform: translate(-50%, 0) scale(1);
+    }
+    50% {
+      transform: translate(-52%, -4%) scale(1.15);
+    }
+    100% {
+      transform: translate(-48%, 0%) scale(1.05);
+    }
+  }
+  
+  @keyframes pulseGlowHover {
+    0% {
+      opacity: 0.6;
+    }
+    100% {
+      opacity: 1;
+    }
+  }

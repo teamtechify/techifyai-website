@@ -1,0 +1,59 @@
+.hover-text-container {
+    position: relative;
+    display: inline-block;
+    height: 1em;
+    line-height: 1em;
+    overflow: hidden;
+    font-size: 2rem;
+    font-family: sans-serif;
+    cursor: pointer;
+    font-size: 12px;
+}
+  
+  
+  .text-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    height: 1em;          /* Match container height */
+    width: 100%;
+    pointer-events: none;
+  }
+  
+  
+  .char {
+    text-transform: uppercase;
+    display: inline-block;
+    line-height: 1em;
+    transform: translateY(0%);
+    transition: transform 0.3s ease;
+  }
+  
+  /* TOP LAYER: Starts in place */
+  .text-layer.top {
+    z-index: 2;
+  }
+  
+  .text-layer.top .char {
+    transform: translateY(0%);
+  }
+  
+  /* BOTTOM LAYER: Starts offscreen below */
+  .text-layer.bottom {
+    z-index: 1;
+  }
+  
+  .text-layer.bottom .char {
+    transform: translateY(100%);
+  }
+  
+  /* Hover Animation */
+  .hover-text-container:hover .text-layer.top .char {
+    transform: translateY(-100%);
+  }
+  
+  .hover-text-container:hover .text-layer.bottom .char {
+    transform: translateY(0%);
+  }
+  
