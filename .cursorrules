@@ -1,0 +1,209 @@
+# Project Instructions
+
+Use these specifications and guidelines as you build the app.
+
+Write the complete code for every step. Do not get lazy.
+
+Your goal is to completely finish whatever I ask for.
+
+## Overview
+
+This is a web application for Techify AI, showcasing their AI services and allowing users to book calls via an integrated booking system. It features an interactive AI chat interface (Nova) powered by Voiceflow and utilizes various modern frontend technologies.
+
+## Tech Stack
+
+-   **Framework:** Next.js (App Router, Turbopack enabled via `pnpm run dev`)
+-   **Language:** TypeScript
+-   **Styling:** Tailwind CSS (v4 configured via `postcss.config.mjs` and `app/globals.css`)
+-   **UI Components:** Shadcn UI (Components located in `/components/ui`), Custom Components (in `/components/*`)
+-   **Animation:** `@react-spring/web` (used in `CoinCanvas`), `framer-motion` (used in `FadeInComponent`, `CounterText`, `ScrollingBanner`, `LiveUpdates`)
+-   **Icons:** `react-icons`, `lucide-react` (Primarily via Shadcn UI)
+-   **Video:** `@cloudflare/stream-react` (via `/components/video`)
+-   **Charting:** `recharts` (used in `/app/(home)/graph.tsx`)
+-   **State Management:** React `useState`, potentially Context API, `react-hook-form`.
+-   **HTTP Client:** `axios` (for internal API calls)
+-   **Utilities:** `clsx`, `tailwind-merge` (via `cn`), `date-fns`, `uuid`.
+-   **Package Manager:** PNPM (Use `pnpm install`)
+-   **Fonts:** `next/font` (Geist Mono, Inter, local fonts 'Pixel Mono', 'JetBrains Mono' configured in `app/layout.tsx`)
+
+## Project Structure
+
+```
+/app                  # Next.js app router
+  /(home)             # ACTIVE Home page route group - FOCUS HERE
+    banner.tsx        # Service banner carousel section
+    banner_data.ts    # Data for the service banner
+    chat.tsx          # Nova AI chat interface section
+    companybanner.tsx # Scrolling company logo banner
+    dream.tsx         # (Potentially deprecated - verify usage) Animated text section
+    graph.tsx         # Business performance graph section
+    hero.tsx          # Main hero section with video
+    nova.tsx          # Component orchestrating banner & chat
+    stats.tsx         # Statistics section with counters
+    # CSS files for specific components (.css)
+  /(home-old)         # DEPRECATED - AVOID USING COMPONENTS FROM HERE
+    # Contains old page sections - DO NOT USE FOR NEW DEVELOPMENT
+  /api                # API Route Handlers
+    /book/route.tsx   # Handles booking via Cal.com API
+    /cal/route.ts     # Fetches availability slots from Cal.com API
+    /pandadoc/route.ts# Fetches PandaDoc documents via API
+    /plan/route.ts    # Handles planning webhooks (likely internal/dev)
+    /voiceflow/route.ts# Interacts with Voiceflow API for Nova chat
+  /details            # $OSOL Details page route (Likely related to old crypto features)
+    /(sections)       # Sections specific to the Details page
+    page.tsx          # Details page component
+  /tokenomics         # Tokenomics page route (Likely related to old crypto features)
+    /(sections)       # Sections specific to the Tokenomics page
+    page.tsx          # Tokenomics page component
+  globals.css         # Tailwind directives, base styles, Shadcn CSS variables
+  layout.tsx          # Root application layout
+  page.tsx            # Root application page (renders ACTIVE home components from /app/(home))
+/components           # Reusable React components
+  /animations         # Animation components (FadeInComponent)
+  /assetsCard         # DEPRECATED (Used in home-old)
+  /buttons            # Custom button components (ButtonMain, ButtonGhost, etc.)
+  /buybanner          # DEPRECATED (Used in home-old)
+  /containers         # Layout container components (ContainerBig, ContainerMain)
+  /countingCard       # Components for displaying stats with counters (Card, CounterText)
+  /footer             # Footer components (FooterBanner - used in old/tokenomics?)
+  /form               # Form components (BookFormComponent - IMPORTANT)
+  /graphs             # Graph utility components (Formatters, PercentageGraph)
+  /hero               # Hero-related components (CoinCanvas 3D animation)
+  /imagebox           # DEPRECATED (Used in home-old)
+  /imagecontentbox    # DEPRECATED (Used in home-old)
+  /inputs             # Input components (VanishInput for Nova chat - IMPORTANT)
+  /liveUpdates        # DEPRECATED (Used in home-old)
+  /nav                # Navigation components (NavComponent, NavItem, LinkHoverText - IMPORTANT)
+  /redeem             # DEPRECATED (Used in home-old)
+  /richText           # Rich text display components (used in tokenomics)
+  /scrollingBanner    # Scrolling banner component (used in old?)
+  /topPerformers      # DEPRECATED (Used in home-old)
+  /ui                 # Base Shadcn UI components (DO NOT MODIFY)
+  /video              # Video player components using Cloudflare Stream (IMPORTANT)
+/hooks                # Custom React hooks (use-mobile.ts)
+/lib                  # Utility functions (utils.ts -> cn function)
+/public               # Static assets (images, svgs, fonts)
+# Root config files (.cursorrules, .gitignore, next.config.ts, etc.)
+```
+
+-   **PRIORITY:** Focus development within `/app/(home)` and its associated components in `/components`. Avoid using components found only in `/app/(home-old)` or listed as DEPRECATED unless explicitly instructed.
+-   The `/details` and `/tokenomics` routes appear related to previous crypto features and may not be relevant to the core AI service offering. Verify relevance before modifying.
+
+## Rules
+
+Follow these rules when building the app.
+
+### General Rules
+
+-   Use `@/*` path aliases for imports (configured in `tsconfig.json`).
+-   Use kebab-case for new files/folders (except Next.js conventions like `page.tsx`).
+-   Use TypeScript (`.ts` for logic/utils/hooks, `.tsx` for components).
+-   Fix ESLint errors immediately (`pnpm run lint`).
+-   **Do not modify base Shadcn UI components in `/components/ui`**. Create custom wrappers or new components in `/components/*` (e.g., `/components/buttons`) if specific styling or functionality beyond Shadcn props is needed.
+
+### Code Implementation Guidelines
+
+-   Implement features completely and thoroughly.
+-   Use Chain of Thought reasoning for planning and implementation steps.
+
+### Error Handling Rules
+
+-   Diagnose errors using step-by-step Chain of Thought.
+-   Plan the fix step-by-step.
+-   Implement the planned fix.
+
+### Loop Encounter Rule
+
+-   If stuck in a loop or facing severe errors, pause. Dedicate significant thought to understanding the problem and the best solution before coding.
+
+### Env Rules
+
+-   Manage environment variables via `.env.local` (request changes, don't commit).
+-   Update `.env.example` (create if needed) for variable documentation.
+-   Use `NEXT_PUBLIC_` prefix ONLY for client-side accessible variables.
+-   Access server-side variables via `process.env`.
+-   Known external service interactions requiring API keys (managed server-side via API routes):
+    -   Cal.com (`CAL_API_KEY`, `CAL_KEY`, `CAL_EVENT_TYPE_ID` via `/api/cal`, `/api/book`)
+    -   Voiceflow (`API_KEY` via `/api/voiceflow`)
+    -   PandaDoc (`PANDADOC_API_KEY` via `/api/pandadoc`)
+-   **Security:** Never hardcode secrets or access `.env` files directly in client-side code. Avoid logging sensitive data.
+
+### Type Rules (TypeScript)
+
+-   Define component prop types using interfaces or type aliases directly within the `.tsx` file for simple, localized props.
+-   If types become complex or are reused across multiple distinct components/modules, create a `/types` directory (if it doesn't exist) and define shared types there (e.g., `types/service-types.ts`).
+-   **Strongly type all component props, function arguments, and return values.**
+-   Prefer interfaces for object shapes, type aliases for unions/intersections.
+
+### Frontend Rules (Next.js, Tailwind, Shadcn, Animations, Video, Charting)
+
+#### General Frontend Rules
+
+-   Use icons from `react-icons` or `lucide-react` as needed. Prefer `lucide-react` if already used by a related Shadcn component.
+-   Write accessible HTML. Use semantic elements appropriately.
+-   Ensure responsiveness using Tailwind's responsive modifiers (e.g., `md:`, `lg:`). Use the `useIsMobile` hook (`@/hooks/use-mobile`) for JS-based responsive logic.
+-   Optimize images using `next/image`. Ensure required domains are listed in `next.config.ts`.
+-   Apply animations subtly using `framer-motion` (e.g., `FadeInComponent`, counters) or `@react-spring/web` (e.g., `CoinCanvas`) where appropriate for enhancing user experience (transitions, visual feedback).
+
+#### Tool Usage
+
+-   **Tailwind CSS:** Style primarily with utility classes. Use `app/globals.css` for base styles, custom fonts, and CSS variables (`--color-background`, `--color-foreground`, etc.). Use the `cn` utility from `@/lib/utils` for conditional class merging.
+-   **Shadcn UI:** Leverage components from `/components/ui` as foundational blocks. Customize appearance using the `className` prop with Tailwind utilities. Adhere to the established theme variables in `globals.css`.
+-   **Video:** Utilize the custom video components in `/components/video` for displaying Cloudflare Stream videos (e.g., `HeroVideo`, `AltVideo1Desktop`).
+-   **Charting:** Use `recharts` for data visualization, following the pattern in `/app/(home)/graph.tsx`.
+-   **API Interaction:** Use `axios` within Client Components to interact with the internal API routes (`/app/api/*`) for actions like booking calls (`BookFormComponent`) or chatting with Nova (`VanishInput`).
+
+#### Components
+
+-   Tag every component/page/layout with `"use server"` or `"use client"` at the top.
+-   Default to Server Components (`"use server"`). Opt into Client Components (`"use client"`) only when necessary for hooks (state, effects, context), browser APIs, event listeners, or using client-side libraries like animation tools or `axios`.
+-   Key Client Components: `NavComponent` (state for mobile popup), `HeroSection` (state for booking modal), `StatsSection` (uses `CounterText`), `CompanyBannerSection` (client-side animation?), `GraphSection` (uses `recharts`), `NovaSections`, `BannerSection`, `ChatSection`, `VanishInput`, `BookFormComponent`, `CoinCanvas`, `FadeInComponent`, `CounterText`.
+-   Separate logical JSX blocks with a blank line for readability.
+
+##### Component Organization & Usage
+
+-   **`/components/ui`:** Base Shadcn components. DO NOT MODIFY.
+-   **`/components/*` (Custom):** Use these reusable components:
+    -   `NavComponent`: Top navigation bar.
+    -   `HeroSection` (`app/(home)`): Main page hero.
+    -   `StatsSection`: Display animated stats.
+    -   `CompanyBannerSection`: Scrolling logos.
+    -   `GraphSection`: Business data graph.
+    -   `NovaSections`: Manages the interactive Service Banner and Chat.
+    -   `BannerSection`: Service carousel.
+    -   `ChatSection` & `VanishInput`: Core of the Nova AI chat interaction.
+    -   `BookFormComponent`: Modal for booking calls via Cal.com.
+    -   `HeroVideo`, `AltVideo1Desktop`: Video display wrappers.
+    -   `CoinCanvas`: Renders the 3D ring animation.
+    -   Utilize custom `Button` variants from `/components/buttons`.
+    -   Utilize `ContainerBig`, `ContainerMain` from `/components/containers` for layout consistency.
+-   **`app/(route)/(sections)`:** Components specific to page sections (mainly `/tokenomics` and `/details` currently, likely less relevant).
+-   **AVOID** components solely associated with `/app/(home-old)`.
+
+##### Data Fetching
+
+-   Prefer Server Components for initial data loading if applicable (though less evident in the active home page structure provided).
+-   Use client-side fetching via `axios` to internal API routes (`/app/api/*`) for dynamic interactions (fetching Cal.com slots, sending chat messages, retrieving PandaDoc).
+
+##### Server Components (`"use server"`)
+
+-   Can be `async`. Use `<Suspense>` for loading UI.
+-   No React hooks or browser APIs.
+-   Cannot be imported directly into Client Components (pass as props/children).
+
+##### Client Components (`"use client"`)
+
+-   Use for interactivity: `useState` (e.g., modals, input fields), `useEffect` (e.g., fetching data on mount/update, animations), event handlers (`onClick`, `onChange`, `onKeyDown`).
+-   Use for API calls triggered by user actions (e.g., `sendMessage` in `VanishInput`, `bookSlot` in `BookFormComponent`).
+-   Leverage custom hooks like `useIsMobile`.
+-   Implement animations using `framer-motion` or `@react-spring/web`.
+
+### Package Management Rules
+
+-   **CRITICAL: Use `pnpm install` for ALL package installations.** (Project uses `pnpm-lock.yaml`).
+-   Use `pnpm run <script>` (e.g., `pnpm run dev`, `pnpm run build`, `pnpm run lint`) to execute scripts defined in `package.json`.
+
+### File Modification Rules
+
+-   **CRITICAL:** Do not modify `.env.local`. Request changes.
+-   **CRITICAL:** Do not modify `.cursorrules` or related config files unless instructed.
