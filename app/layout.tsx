@@ -58,10 +58,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark"> {/* Added dark class here */}
-      <body
-        className={`${geistMono.variable} ${inter.variable} ${pixelMono.variable} ${jb.variable} antialiased`}
-      >
+    <html lang="en" className="dark">
+      {/* The <head> is automatically managed by Next.js unless customized.
+          Ensure no characters or comments are placed directly within <html> before <body> */}
+      <body className={`${geistMono.variable} ${inter.variable} ${pixelMono.variable} ${jb.variable} antialiased`}>
         <NavComponent />
         {children}
         {/* <Footer/> */}
