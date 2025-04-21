@@ -1,0 +1,27 @@
+.next/
+node_modules/
+next-env.d.ts
+
+# Dependency caches
+*/node_modules/
+*/.npm/
+__pycache__/
+*/pytest_cache/
+*/.mypy_cache/
+
+# Build caches
+*/gradle/
+*/.nuget/
+*/.cargo/
+*/stack-work/
+*/ccache/
+
+# IDE and Editor caches
+*/.idea/
+*.vscode/
+*/*cun
+
+# Public directory and sensitive environment files
+/public/
+.env.local
+favicon.ico
