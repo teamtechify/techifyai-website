@@ -32,7 +32,7 @@
     -   **Step Dependencies**: Step 2
     -   **User Instructions**: None
 
--   [ ] Step 5: Add State and Handlers to `VanishInput`
+-   [ x] Step 5: Add State and Handlers to `VanishInput`
     -   **Task**: Introduce state variables and handler functions in `VanishInput` to manage the PDF popup modal's visibility and the currently selected document ID.
     -   **Files**:
         -   `components/inputs/vanishinput.tsx`: Import `useState`. Add state variables: `const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);` and `const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);`. Create handler functions: `openPdfPopup(docId: string)` (sets `currentDocumentId` and `isPopupOpen` to true) and `closePdfPopup()` (sets `isPopupOpen` to false and `currentDocumentId` to null).
