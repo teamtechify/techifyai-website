@@ -1,8 +1,10 @@
 // app/api/voiceflow/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid'; // Import uuidv4
 
-const APIKEY = process.env.API_KEY || 'VF.DM.67f539ea2bfa1eff8c1a7c41.VKlMMrDZWJX3tYTh'; // Use environment variable or default
+// Use the correct environment variable name as defined in the project's .env setup
+const VOICEFLOW_API_KEY = process.env.VOICEFLOW_API_KEY;
 
 /**
  * Processes Voiceflow steps to standardize document ID tags.
@@ -63,6 +65,12 @@ const processDocumentReferences = (steps: any[]) => {
 
 
 export async function POST(req: NextRequest) {
+  // Check if the API key is loaded from environment variables
+  if (!VOICEFLOW_API_KEY) {
+    console.error("VOICEFLOW_API_KEY environment variable is not set.");
+    return NextResponse.json({ error: "Server configuration error: Voiceflow API Key missing." }, { status: 500 });
+  }
+
   try {
     const body = await req.json();
     const userId = body.userId || uuidv4(); // Use provided userId or generate one
@@ -83,7 +91,7 @@ export async function POST(req: NextRequest) {
       headers: {
         accept: 'application/json',
         'content-type': 'application/json',
-        Authorization: APIKEY,
+        Authorization: VOICEFLOW_API_KEY, // Use the environment variable
         versionID: 'production' // Or 'development' based on your needs
       },
       body: JSON.stringify({
