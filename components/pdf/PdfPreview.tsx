@@ -7,6 +7,13 @@
  * feedback on hover and focus for better usability and accessibility, styled with
  * Tailwind CSS to match the application's design system.
  *
+ * Accessibility Notes (Step 10):
+ * - Uses a semantic <button> element.
+ * - Includes an `aria-label` providing context about the action and document ID.
+ * - Includes screen-reader-only text for additional context.
+ * - Utilizes Tailwind's `focus-visible` utilities to ensure clear focus states for keyboard navigation,
+ *   integrating with Shadcn's ring styles.
+ *
  * @dependencies
  * - React: For component structure.
  * - lucide-react: For the FileText icon.
@@ -21,7 +28,6 @@
  * @notes
  * - Marked as a client component ("use client") because it handles user interaction (onClick).
  * - Styling uses Tailwind CSS utility classes for consistency with the project's design system.
- * - Accessibility is enhanced using a semantic button element, aria-label, and focus styles.
  */
 "use client";
 
@@ -46,6 +52,7 @@ interface PdfPreviewProps {
  *
  * Renders a clickable PDF icon button. Clicking it triggers the provided onClick handler.
  * Styled for visual consistency and responsiveness within the chat interface.
+ * Ensures accessibility through proper labeling and focus management.
  *
  * @param {PdfPreviewProps} props - The component props.
  * @returns {JSX.Element} The rendered button component.
@@ -59,12 +66,14 @@ export const PdfPreview: React.FC<PdfPreviewProps> = ({ documentId, onClick, cla
     onClick(documentId);
   };
 
+  // Construct a more descriptive aria-label
+  const ariaLabel = `View PDF document: ${documentId}`;
+
   return (
     <button
       type="button" // Explicitly set button type for accessibility
       onClick={handleClick}
-      // Provide a descriptive label for screen readers
-      aria-label={`View PDF document ${documentId}`}
+      aria-label={ariaLabel} // Use the descriptive aria-label
       className={cn(
         // Base styles: inline flex container, centered items, padding, rounded corners, text color
         'inline-flex items-center justify-center p-1 rounded text-white',
@@ -75,6 +84,7 @@ export const PdfPreview: React.FC<PdfPreviewProps> = ({ documentId, onClick, cla
         // Transitions for smooth visual feedback
         'transition-all duration-150',
         // Focus states: remove default outline, add visible ring using Shadcn variables
+        // Tailwind's focus-visible ensures the ring only appears for keyboard navigation
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background',
         // Vertical alignment and margin (useful when placed next to text)
         'ml-2 align-middle', // Ensure vertical alignment with text
@@ -83,7 +93,7 @@ export const PdfPreview: React.FC<PdfPreviewProps> = ({ documentId, onClick, cla
       )}
     >
       {/* Render the PDF icon */}
-      <FileText className="h-5 w-5" /> {/* Icon size */}
+      <FileText className="h-5 w-5" aria-hidden="true" /> {/* Hide decorative icon from screen readers */}
       {/* Screen reader only text for additional context */}
       <span className="sr-only">View PDF</span>
     </button>

@@ -62,7 +62,7 @@
     -   **Step Dependencies**: Step 8.1
     -   **User Instructions**: None
 
--   [ ] Step 10: Enhance Accessibility
+-   [ x] Step 10: Enhance Accessibility
     -   **Task**: Review `PdfPreview` and `PdfPopup` for accessibility best practices. **Verify accessibility of the revised footer Close button added in Step 8.1.**
     -   **Files**:
         -   `components/pdf/PdfPreview.tsx`: Verify `aria-label`, focus state.
