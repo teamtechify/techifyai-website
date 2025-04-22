@@ -25,7 +25,7 @@
 
 ## Phase 2: Core Functionality Integration
 
--   [ ] Step 4: Implement `PdfPreview` Icon and Click Handling
+-   [ x] Step 4: Implement `PdfPreview` Icon and Click Handling
     -   **Task**: Add the PDF icon, button structure, basic styling, hover/active states, and click handler logic to `PdfPreview`. Implement basic accessibility.
     -   **Files**:
         -   `components/pdf/PdfPreview.tsx`: Import `FileText` from `lucide-react` and `cn` from `@/lib/utils`. Replace placeholder div with a `<button>` element. Inside the button, render `<FileText />`. Add `onClick` handler calling the passed `onClick` prop with `documentId`. Add `className` prop usage with `cn` for merging. Apply base Tailwind classes for inline display, padding, text color, basic rounding, and transitions. Add hover (`hover:text-blue-300`, `hover:bg-white/10`) and active (`active:opacity-80`) states. Add `aria-label` and `type="button"`. Include `sr-only` text for screen readers. Ensure focus styles are applied (`focus:outline-none focus-visible:ring-2 ...`).
