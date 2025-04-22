@@ -46,7 +46,7 @@
     -   **Step Dependencies**: Step 4, Step 5
     -   **User Instructions**: None
 
--   [ ] Step 7: Implement `PdfPopup` Core UI (Iframe, Buttons, Header)
+-   [ x] Step 7: Implement `PdfPopup` Core UI (Iframe, Buttons, Header)
     -   **Task**: Add the iframe for PDF display, the "Download" button (as a link), the "Close" button, and the modal header to `PdfPopup`.
     -   **Files**:
         -   `components/pdf/PdfPopup.tsx`: Import `DialogHeader`, `DialogTitle`, `DialogClose`, `DialogFooter`, `Button` from `@/components/ui/*`, and `X`, `Download` icons from `lucide-react`. Add `DialogHeader` containing `DialogTitle` ("Document Viewer") and a `DialogClose` button (using `Button` variant="ghost" size="icon" with an `X` icon). Add the `iframe` element within the main content area. Set its `src` dynamically using the `documentId` prop: `const pdfUrl = documentId ? \`/api/pandadoc?documentId=\${documentId}\` : '';`, then use `pdfUrl` in the `src`. Set `title` attribute for accessibility. Add `DialogFooter` containing the "Download" button. Use `<Button asChild ...>` with an `<a>` tag inside. Set the `href` to `pdfUrl` and add the `download` attribute (e.g., `download={\`document-\${documentId}.pdf\`}`). Add the `Download` icon inside the button text. Ensure the iframe and footer are laid out vertically (e.g., using flex column on `DialogContent`).
