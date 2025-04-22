@@ -16,7 +16,7 @@
     -   **Step Dependencies**: Step 1
     -   **User Instructions**: None
 
--   [ ] Step 3: Create Basic `PdfPopup` Component
+-   [ x] Step 3: Create Basic `PdfPopup` Component
     -   **Task**: Create the initial file and basic structure for the `PdfPopup` client component using Shadcn `Dialog`. Include props definition and basic dialog structure.
     -   **Files**:
         -   `components/pdf/PdfPopup.tsx`: Create file. Add `"use client";`, import React, `useState`, `Dialog`, `DialogContent`, `DialogOverlay`. Define `PdfPopupProps` interface (`isOpen`, `documentId`, `onClose`). Define the functional component structure accepting props. Return a basic `<Dialog>` structure controlled by the `isOpen` prop, with an `onOpenChange` handler calling `onClose`. Include `DialogOverlay` and `DialogContent` placeholders.
