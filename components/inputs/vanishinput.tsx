@@ -288,7 +288,8 @@ export const VanishInput: React.FC<VanishInputProps> = ({
       ]);
 
     } catch (err) {
-      console.error("Error sending message:", err);
+      // Log a generic error message instead of the full error object
+      console.error("Error sending message to Voiceflow API:", err instanceof Error ? err.message : 'Unknown error');
       // Update conversation on error: remove thinking message and add an error message
       setConversation(prev => [
         ...prev.filter(msg => msg.message !== '...Nova is writing a response'),

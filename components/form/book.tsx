@@ -76,11 +76,12 @@ export const BookFormComponent = ({ close }: { close: Function }) => {
                 }, 2000)
             } else {
                 setBookingStatus("Booking failed.");
-                console.error("Booking failed:", data);
+                console.error("Booking failed:", data.error || 'Unknown error'); // Log specific error message if available
+                setBookingStatus(`Booking failed: ${data.error?.message || 'Please try again.'}`); // Show a more specific error if possible
             }
         } catch (err) {
-            setBookingStatus("Error booking slot.");
-            console.error(err);
+            setBookingStatus("Error booking slot. Please try again later."); // Generic user message
+            console.error("Error during booking API call:", err instanceof Error ? err.message : 'Unknown error'); // Log generic error message
         }
     };
 
@@ -120,15 +121,18 @@ export const BookFormComponent = ({ close }: { close: Function }) => {
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     className="p-2 bg-white/10 text-white rounded-md w-full"
+                                    required
+                                    maxLength={100}
                                 />
                             </div>
                             <div>
                                 <label className="text-white block mb-1">EMAIL ADDRESS*</label>
                                 <input
-                                    type="text"
+                                    type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="p-2 bg-white/10 text-white rounded-md w-full"
+                                    required
                                 />
                             </div>
                         </div>
