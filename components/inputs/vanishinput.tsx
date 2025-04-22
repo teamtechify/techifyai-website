@@ -9,8 +9,9 @@
  * - User input field with focus/blur handling.
  * - Sends user messages to the Voiceflow API via `/api/voiceflow`.
  * - Displays conversation history between user and AI (Nova).
- * - Detects PandaDoc document IDs in AI responses and prepares for rendering previews.
- * - Manages the open/closed state of the PDF popup modal.
+ * - Detects PandaDoc document IDs (`<DOCUMENTID>...</DOCUMENTID>`) in AI responses.
+ * - Renders a clickable `PdfPreview` icon for detected documents.
+ * - Manages the open/closed state of the `PdfPopup` modal for viewing PDFs.
  * - Uses a unique session-based user ID for Voiceflow interactions.
  *
  * @dependencies
@@ -20,12 +21,11 @@
  * - react-icons/io5: For the send icon.
  * - uuid: For generating unique session user IDs.
  * - ./index.css: For custom scrollbar styling.
- * - @/components/pdf/PdfPreview: Component for the clickable PDF icon (to be added in next step).
- * - @/components/pdf/PdfPopup: Component for the PDF modal (to be added in next step).
+ * - @/components/pdf/PdfPreview: Component for the clickable PDF icon.
+ * - @/components/pdf/PdfPopup: Component for the PDF modal.
  *
  * @notes
  * - The component uses a custom hook `useSessionUserId` to manage a unique ID per browser session.
- * - Message parsing for `<DOCUMENTID>` tags and rendering of `PdfPreview`/`PdfPopup` will be implemented in the next step.
  * - Error handling for API calls is included.
  * - Conversation scrolling automatically scrolls to the bottom on new messages.
  */
@@ -37,9 +37,9 @@ import Image from "next/image";
 import { IoReturnDownForwardSharp } from "react-icons/io5";
 import './index.css';
 import { v4 as uuidv4 } from 'uuid';
-// PdfPreview and PdfPopup will be imported and used in the next step
-// import { PdfPreview } from '@/components/pdf/PdfPreview';
-// import { PdfPopup } from '@/components/pdf/PdfPopup';
+// Import the new PDF components
+import { PdfPreview } from '@/components/pdf/PdfPreview';
+import { PdfPopup } from '@/components/pdf/PdfPopup';
 
 /**
  * @hook useSessionUserId
@@ -61,7 +61,6 @@ const useSessionUserId = () => {
       setUserId(existingId);
     } else {
       // Handle server-side rendering or environments without sessionStorage
-      // Potentially generate a temporary ID or handle appropriately
       console.warn("Session storage not available. Using temporary ID logic if needed.");
       // setUserId(uuidv4()); // Example: Generate a temporary ID if needed, but be aware of SSR implications
     }
@@ -99,8 +98,32 @@ interface ConversationEntry {
   from: 'user' | 'ai';
   message?: string;
   image?: string;
-  documentId?: string; // Existing field for old iframe logic (to be potentially removed/refactored)
+  // documentId?: string; // This field is now handled by parsing within the component
 }
+
+/**
+ * Parses a message string to find and extract a PandaDoc document ID
+ * enclosed in <DOCUMENTID> tags.
+ * @param {string} message - The message string to parse.
+ * @returns {{ text: string; documentId: string | null }} An object containing the cleaned message text
+ *          (tags removed) and the extracted document ID, or null if no ID was found.
+ */
+const parseMessageForDocument = (message: string): { text: string; documentId: string | null } => {
+  const docIdRegex = /<DOCUMENTID>(.*?)<\/DOCUMENTID>/;
+  const match = message.match(docIdRegex);
+
+  if (match && match[1]) {
+    // Found a document ID
+    return {
+      text: message.replace(docIdRegex, '').trim(), // Remove the tag and trim whitespace
+      documentId: match[1], // Return the extracted ID
+    };
+  }
+
+  // No document ID found
+  return { text: message, documentId: null };
+};
+
 
 /**
  * VanishInput Component
@@ -181,7 +204,12 @@ export const VanishInput: React.FC<VanishInputProps> = ({
    */
   const scrollToBottom = () => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      // Use setTimeout to ensure scrolling happens after the DOM update
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+           scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        }
+      }, 0);
     }
   };
 
@@ -230,18 +258,9 @@ export const VanishInput: React.FC<VanishInputProps> = ({
       // Parse the steps from the Voiceflow response
       const parsed = steps.map((step: any): ConversationEntry | null => {
         if ((step.type === "speak" || step.type === "text") && step.payload?.message) {
-          const message = step.payload.message;
-
-          // --- Existing Document ID Handling (for old iframe logic) ---
-          // This part might be refactored or removed in the next step when PdfPreview is integrated.
-          const match = message.match(/<DOCUMENTID>(.*?)<\/DOCUMENTID>/);
-          if (match && match[1]) {
-            // For now, keep the old structure until parsing logic is fully moved
-            return { from: "ai", documentId: match[1], message: message.replace(/<DOCUMENTID>.*?<\/DOCUMENTID>/, '').trim() }; // Keep cleaned message too
-          }
-          // --- End Existing Document ID Handling ---
-
-          return { from: "ai", message };
+          // We don't need to parse for document ID here anymore,
+          // as it will be handled during rendering.
+          return { from: "ai", message: step.payload.message };
         } else if (step.type === "visual" && step.payload?.image) {
           return { from: "ai", image: step.payload.image };
         }
@@ -318,62 +337,44 @@ export const VanishInput: React.FC<VanishInputProps> = ({
     <div className={`relative py-8 parent`}>
       {/* Conversation Area */}
       <div ref={scrollContainerRef} className="mt-6 max-h-[320px] lg:max-h-[680px] overflow-y-scroll space-y-3 px-4 custom-scroll">
-        {conversation.map((entry, idx) => (
-          <div key={`${entry.from}-${idx}`} className={`flex ${entry.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`inline-block p-2 px-3 rounded-lg max-w-[85%] lg:max-w-[75%] break-words ${
-              entry.from === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white'
-            }`}>
-              {/* Render message text */}
-              {entry.message && <p>{entry.message}</p>}
+        {conversation.map((entry, idx) => {
+          // Parse AI messages for document ID during rendering
+          const parsedMessage = entry.from === 'ai' && entry.message
+            ? parseMessageForDocument(entry.message)
+            : { text: entry.message || '', documentId: null };
 
-              {/* Render images if present */}
-              {entry.image && (
-                <div className="mt-2">
-                  <Image src={entry.image} alt="AI visual response" width={300} height={200} className="rounded-md" />
-                </div>
-              )}
+          return (
+            <div key={`${entry.from}-${idx}`} className={`flex ${entry.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`inline-block p-2 px-3 rounded-lg max-w-[85%] lg:max-w-[75%] break-words ${
+                entry.from === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white'
+              }`}>
+                {/* Render cleaned message text */}
+                {parsedMessage.text && <p>{parsedMessage.text}</p>}
 
-              {/* --- Existing iFrame Rendering (To be replaced) --- */}
-              {/* This section renders the PDF directly in an iframe based on the old logic.
-                  It will be replaced by the PdfPreview component in the next step. */}
-              {entry.documentId && !entry.message && ( // Only render iframe if no message text (old logic assumption)
-                <div className="mt-4 border border-white/20 rounded-lg overflow-hidden bg-white/5 p-4 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <p className="text-white text-sm font-medium">📄 Nova has shared a document with you:</p>
-                    <a
-                      href={`/api/pandadoc?documentId=${entry.documentId}`}
-                      download={`document-${entry.documentId}.pdf`} // Add download attribute
-                      target="_blank" // Open in new tab for safety/convenience
-                      rel="noopener noreferrer"
-                      className="text-blue-300 text-sm hover:underline"
-                    >
-                      Download PDF
-                    </a>
+                {/* Render images if present */}
+                {entry.image && (
+                  <div className="mt-2">
+                    <Image src={entry.image} alt="AI visual response" width={300} height={200} className="rounded-md" />
                   </div>
-                  <iframe
-                    src={`/api/pandadoc?documentId=${entry.documentId}`}
-                    title={`PDF Document Viewer - ${entry.documentId}`} // Add title for accessibility
-                    width="100%"
-                    height="500px" // Fixed height, consider responsiveness
-                    className="w-full border border-white/10 rounded"
-                    // sandbox="allow-scripts allow-same-origin" // Consider sandbox attributes for security
-                  />
-                </div>
-              )}
-              {/* --- End Existing iFrame Rendering --- */}
+                )}
 
-              {/* --- Placeholder for PdfPreview (Next Step) --- */}
-              {/* {parsedMessage.documentId && (
-                <PdfPreview
-                  documentId={parsedMessage.documentId}
-                  onClick={openPdfPopup}
-                  className="ml-2 align-middle" // Example styling
-                />
-              )} */}
-              {/* --- End Placeholder --- */}
+                {/* --- NEW: Render PdfPreview if documentId exists --- */}
+                {parsedMessage.documentId && (
+                  <PdfPreview
+                    documentId={parsedMessage.documentId}
+                    onClick={openPdfPopup}
+                    className="ml-2 align-middle" // Basic styling for positioning
+                  />
+                )}
+                {/* --- End PdfPreview Rendering --- */}
+
+                {/* --- REMOVED: Old iFrame Rendering Logic --- */}
+                {/* The old iframe rendering block has been removed. */}
+
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {/* Empty div at the end to help with scrolling */}
         <div ref={conversationEndRef} />
       </div>
@@ -405,13 +406,13 @@ export const VanishInput: React.FC<VanishInputProps> = ({
         <p className="text-[14px] lg:text-[18px] text-white uppercase mt-1">to send</p>
       </div>
 
-      {/* --- Placeholder for PdfPopup Rendering (Next Step) --- */}
-      {/* <PdfPopup
+      {/* --- Render PdfPopup conditionally --- */}
+      <PdfPopup
         isOpen={isPopupOpen}
         documentId={currentDocumentId}
         onClose={closePdfPopup}
-      /> */}
-      {/* --- End Placeholder --- */}
+      />
+      {/* --- End PdfPopup Rendering --- */}
     </div>
   );
 };

@@ -39,7 +39,7 @@
     -   **Step Dependencies**: None (modifies existing component)
     -   **User Instructions**: None
 
--   [ ] Step 6: Implement Message Parsing and Component Rendering in `VanishInput`
+-   [ x] Step 6: Implement Message Parsing and Component Rendering in `VanishInput`
     -   **Task**: Implement the logic to parse AI messages for the `<DOCUMENTID>` tag, extract the ID, render the cleaned message text, and conditionally render the `PdfPreview` component. Also, conditionally render the `PdfPopup` component based on the state managed in the previous step.
     -   **Files**:
         -   `components/inputs/vanishinput.tsx`: Import `PdfPreview` and `PdfPopup` from `/components/pdf/`. Create a helper function `parseMessageForDocument(message: string): { text: string; documentId: string | null }` using the specified regex (`/<DOCUMENTID>(.*?)<\/DOCUMENTID>/`). Inside the `conversation.map` function, specifically for AI messages (`entry.from === 'ai'`), call `parseMessageForDocument` on `entry.message`. Render the returned `parsedMessage.text`. If `parsedMessage.documentId` exists, render `<PdfPreview documentId={parsedMessage.documentId} onClick={openPdfPopup} className="ml-2 align-middle" />` (adjust styling/positioning as needed). *Remove the old iframe rendering logic if it exists based on `entry.documentId`*. Outside the `conversation.map`, conditionally render `<PdfPopup isOpen={isPopupOpen} documentId={currentDocumentId} onClose={closePdfPopup} />`. Ensure correct `key` props are used within the map.
