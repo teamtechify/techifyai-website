@@ -2,14 +2,14 @@
 
 ## Phase 1: Setup and Component Structure
 
--   [ ] Step 1: Create Directory Structure
+-   [ x] Step 1: Create Directory Structure
     -   **Task**: Create the new directory required for the PDF components.
     -   **Files**:
         -   Create directory: `/components/pdf/`
     -   **Step Dependencies**: None
     -   **User Instructions**: None
 
--   [ ] Step 2: Create Basic `PdfPreview` Component
+-   [ x] Step 2: Create Basic `PdfPreview` Component
     -   **Task**: Create the initial file and basic structure for the `PdfPreview` client component. Include props definition and a placeholder return value.
     -   **Files**:
         -   `components/pdf/PdfPreview.tsx`: Create file. Add `"use client";`, import React, define `PdfPreviewProps` interface (`documentId`, `onClick`, `className?`), define the functional component structure accepting props, return a simple placeholder div.
