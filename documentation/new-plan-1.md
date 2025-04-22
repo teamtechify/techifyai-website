@@ -89,7 +89,7 @@
         12. Test responsiveness by resizing the browser window or using developer tools to simulate different devices (desktop, tablet, mobile). Check modal layout and PDF readability.
         13. (Optional) Simulate an error by temporarily modifying the `/api/pandadoc` route or providing an invalid `documentId` to check the error state UI in the popup.
 
--   [ ] Step 12: Remove Temporary Testing Code **(New Step)**
+-   [ x] Step 12: Remove Temporary Testing Code **(New Step)**
     -   **Task**: Remove any temporary code, placeholders, or hardcoded values added specifically for testing during development. This includes the placeholder document ID logic in `VanishInput.tsx`.
     -   **Files**:
         -   `components/inputs/vanishinput.tsx`: Locate and remove the temporary code block that forces a `documentId` onto a specific message index.

@@ -23,11 +23,13 @@
  * - ./index.css: For custom scrollbar styling.
  * - @/components/pdf/PdfPreview: Component for the clickable PDF icon.
  * - @/components/pdf/PdfPopup: Component for the PDF modal.
+ * - @/lib/utils: For the `cn` utility function.
  *
  * @notes
  * - The component uses a custom hook `useSessionUserId` to manage a unique ID per browser session.
  * - Error handling for API calls is included.
  * - Conversation scrolling automatically scrolls to the bottom on new messages.
+ * - PDF document ID parsing relies on the specific format `<DOCUMENTID>...</DOCUMENTID>`.
  */
 "use client";
 
@@ -40,6 +42,7 @@ import { v4 as uuidv4 } from 'uuid';
 // Import the new PDF components
 import { PdfPreview } from '@/components/pdf/PdfPreview';
 import { PdfPopup } from '@/components/pdf/PdfPopup';
+import { cn } from '@/lib/utils'; // Ensure cn is imported
 
 /**
  * @hook useSessionUserId
@@ -62,7 +65,8 @@ const useSessionUserId = () => {
     } else {
       // Handle server-side rendering or environments without sessionStorage
       console.warn("Session storage not available. Using temporary ID logic if needed.");
-      // setUserId(uuidv4()); // Example: Generate a temporary ID if needed, but be aware of SSR implications
+      // Example: Generate a temporary ID if needed, but be aware of SSR implications
+      // setUserId(uuidv4());
     }
   }, []);
 
@@ -98,7 +102,6 @@ interface ConversationEntry {
   from: 'user' | 'ai';
   message?: string;
   image?: string;
-  // documentId?: string; // This field is now handled by parsing within the component
 }
 
 /**
@@ -109,6 +112,7 @@ interface ConversationEntry {
  *          (tags removed) and the extracted document ID, or null if no ID was found.
  */
 const parseMessageForDocument = (message: string): { text: string; documentId: string | null } => {
+  // Regular expression to find the document ID tag and capture its content
   const docIdRegex = /<DOCUMENTID>(.*?)<\/DOCUMENTID>/;
   const match = message.match(docIdRegex);
 
@@ -128,7 +132,8 @@ const parseMessageForDocument = (message: string): { text: string; documentId: s
 /**
  * VanishInput Component
  *
- * The main chat interface component.
+ * The main chat interface component. Handles user input, conversation display,
+ * Voiceflow API interaction, and PDF preview/popup integration.
  *
  * @param {VanishInputProps} props - The component props.
  * @returns {JSX.Element | null} The rendered chat interface, or null if userId is not available.
@@ -149,7 +154,7 @@ export const VanishInput: React.FC<VanishInputProps> = ({
   const [inputData, setInputData] = useState({ data: inputValue });
   // State to track if the input field is focused
   const [isFocused, setIsFocused] = useState(false);
-  // State to control the visibility of the blinking caret
+  // State to control the visibility of the blinking caret (optional, CSS preferred)
   const [showCaret, setShowCaret] = useState(true);
   // State to store the conversation history
   const [conversation, setConversation] = useState<ConversationEntry[]>([]);
@@ -160,8 +165,8 @@ export const VanishInput: React.FC<VanishInputProps> = ({
 
   // Refs for DOM elements
   const inputRef = useRef<HTMLInputElement>(null);
-  const conversationEndRef = useRef<HTMLDivElement>(null); // Ref to scroll to the end of the conversation
-  const scrollContainerRef = useRef<HTMLDivElement>(null); // Ref for the scrollable conversation area
+  const conversationEndRef = useRef<HTMLDivElement>(null); // Ref to scroll to the end
+  const scrollContainerRef = useRef<HTMLDivElement>(null); // Ref for the scrollable area
 
   // --- State for PDF Popup ---
   /** State to control the visibility of the PDF popup modal. */
@@ -171,7 +176,7 @@ export const VanishInput: React.FC<VanishInputProps> = ({
 
   // --- Handlers for PDF Popup ---
   /**
-   * Opens the PDF popup modal.
+   * Opens the PDF popup modal and sets the current document ID.
    * @param {string} docId - The ID of the document to display.
    */
   const openPdfPopup = (docId: string) => {
@@ -180,7 +185,7 @@ export const VanishInput: React.FC<VanishInputProps> = ({
   };
 
   /**
-   * Closes the PDF popup modal.
+   * Closes the PDF popup modal and clears the current document ID.
    */
   const closePdfPopup = () => {
     setIsPopupOpen(false);
@@ -200,21 +205,25 @@ export const VanishInput: React.FC<VanishInputProps> = ({
   }
 
   /**
-   * Scrolls the conversation container to the bottom.
+   * Scrolls the conversation container to the bottom smoothly.
+   * Uses setTimeout to ensure scrolling happens after DOM updates.
    */
   const scrollToBottom = () => {
     if (scrollContainerRef.current) {
-      // Use setTimeout to ensure scrolling happens after the DOM update
+      // Use setTimeout to defer execution until after the render cycle
       setTimeout(() => {
         if (scrollContainerRef.current) {
-           scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+           scrollContainerRef.current.scrollTo({
+             top: scrollContainerRef.current.scrollHeight,
+             behavior: 'smooth' // Use smooth scrolling
+           });
         }
       }, 0);
     }
   };
 
   /**
-   * Handles changes in the input field.
+   * Handles changes in the input field, updating the inputData state.
    * @param {React.ChangeEvent<HTMLInputElement>} e - The input change event.
    */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -222,95 +231,102 @@ export const VanishInput: React.FC<VanishInputProps> = ({
   };
 
   /**
-   * Sends the user's message to the Voiceflow API and updates the conversation.
+   * Sends the user's message to the Voiceflow API, updates the conversation state,
+   * handles loading indicators, and processes the AI's response.
    */
   const sendMessage = async () => {
-    if (!inputData.data.trim() || !userId) return; // Ensure userId is available
+    // Prevent sending empty messages or if userId is not yet available
+    if (!inputData.data.trim() || !userId) return;
 
     const userMessage = inputData.data;
-    // Add user message to conversation
+    // Add user message optimistically to the conversation
     setConversation(prev => [...prev, { from: 'user', message: userMessage }]);
-    setInputData({ data: "" }); // Clear input field
-    setLoading(true); // Show loading indicator
-    // Add temporary AI thinking message
+    setInputData({ data: "" }); // Clear input field immediately
+    setLoading(true); // Show loading state
+
+    // Add a temporary "thinking" message from the AI
+    const thinkingMessageId = `ai-thinking-${Date.now()}`; // Unique key/id
     setConversation(prev => [...prev, { from: 'ai', message: '...Nova is writing a response' }]);
 
     try {
-      // Send initial launch message if not already done
+      // Send initial launch message if this is the first interaction
       if (!initialized) {
         await axios.post("/api/voiceflow", {
           userId,
           actionType: "launch"
         });
-        setInitialized(true);
+        setInitialized(true); // Mark as initialized
       }
 
-      // Send the user's text message along with any selected services
+      // Send the user's text message, including any selected services
       const response = await axios.post("/api/voiceflow", {
         userId,
         actionType: "text",
-        payload: userMessage + '::[SERVICES BEGIN]::' + arrayToCommaString(services),
+        // Append selected services in a structured way for Voiceflow to parse
+        payload: `${userMessage}::[SERVICES BEGIN]::${arrayToCommaString(services)}`,
       });
-      setServices([]); // Clear selected services after sending
+      setServices([]); // Clear selected services after they've been sent
 
       const steps = response.data.steps;
 
-      // Parse the steps from the Voiceflow response
-      const parsed = steps.map((step: any): ConversationEntry | null => {
+      // Parse the steps from the Voiceflow response into ConversationEntry format
+      const parsedAiResponses = steps.map((step: any): ConversationEntry | null => {
         if ((step.type === "speak" || step.type === "text") && step.payload?.message) {
-          // We don't need to parse for document ID here anymore,
-          // as it will be handled during rendering.
+          // Message content will be parsed for document ID during rendering
           return { from: "ai", message: step.payload.message };
         } else if (step.type === "visual" && step.payload?.image) {
+          // Handle image responses
           return { from: "ai", image: step.payload.image };
         }
-        return null; // Ignore other step types or steps without relevant payload
-      }).filter((entry): entry is ConversationEntry => entry !== null); // Filter out null entries and assert type
+        return null; // Ignore other step types
+      }).filter((entry): entry is ConversationEntry => entry !== null); // Filter out nulls and assert type
 
-      // Update conversation: remove thinking message and add parsed AI responses
+      // Update conversation: remove the "thinking" message and add the actual AI responses
       setConversation(prev => [
-        ...prev.filter(msg => msg.message !== '...Nova is writing a response'),
-        ...parsed
+        ...prev.filter(msg => msg.message !== '...Nova is writing a response'), // Remove thinking message
+        ...parsedAiResponses // Add new AI messages
       ]);
+
     } catch (err) {
       console.error("Error sending message:", err);
-      // Update conversation: remove thinking message and add error message
+      // Update conversation on error: remove thinking message and add an error message
       setConversation(prev => [
         ...prev.filter(msg => msg.message !== '...Nova is writing a response'),
         { from: 'ai', message: 'Sorry, I encountered an error. Please try again.' }
       ]);
     } finally {
-      setLoading(false); // Hide loading indicator
+      setLoading(false); // Hide loading state regardless of success or error
     }
   };
 
   /**
-   * Handles the Enter key press in the input field to send the message.
+   * Handles the Enter key press in the input field to trigger sendMessage.
    * @param {React.KeyboardEvent<HTMLInputElement>} e - The keyboard event.
    */
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault(); // Prevent default form submission behavior
-      await sendMessage();
+      await sendMessage(); // Send the message
     }
   };
 
-  // Effect to manage the blinking caret visibility
+  // Effect to manage the blinking caret visibility (optional, CSS preferred)
   useEffect(() => {
+    // Show caret if focused or if input is empty
     if (isFocused || inputData.data.length === 0) {
       const interval = setInterval(() => {
         setShowCaret((prev) => !prev);
       }, 600); // Standard caret blink interval
-      return () => clearInterval(interval); // Cleanup interval on unmount or state change
+      return () => clearInterval(interval); // Cleanup interval
     } else {
-      setShowCaret(false); // Hide caret when input is not focused and has text
+      setShowCaret(false); // Hide caret when input has text and is not focused
     }
   }, [isFocused, inputData.data]);
 
   // Effect to scroll to the bottom whenever the conversation updates
   useEffect(() => {
     scrollToBottom();
-  }, [conversation]);
+  }, [conversation]); // Dependency array includes conversation state
 
   /**
    * Handles the input field focus event.
@@ -318,36 +334,49 @@ export const VanishInput: React.FC<VanishInputProps> = ({
    */
   const FocusInput = () => {
     setIsFocused(true);
-    setActive(true); // Expand chat on focus
+    setActive(true); // Expand chat interface when input is focused
   };
 
   /**
    * Handles the input field blur event.
-   * Clears focus state but keeps the chat interface active/expanded.
+   * Clears focus state. Keeps the chat interface active.
    */
   const BlurInput = () => {
     setIsFocused(false);
-    // setActive(true); // Keep active even on blur, user might be interacting with conversation
+    // Keep chat active even on blur, user might be interacting with conversation history
+    // setActive(true);
   };
 
-  // Render null if userId hasn't been initialized yet
+  // Render null if userId hasn't been initialized yet (prevents API calls with no ID)
   if (!userId) return null;
 
   return (
-    <div className={`relative py-8 parent`}>
+    <div className={cn(`relative py-8 parent`, active ? 'chat-active' : '')}> {/* Add class based on active state */}
       {/* Conversation Area */}
-      <div ref={scrollContainerRef} className="mt-6 max-h-[320px] lg:max-h-[680px] overflow-y-scroll space-y-3 px-4 custom-scroll">
+      <div
+        ref={scrollContainerRef}
+        className={cn(
+          "mt-6 space-y-3 px-4 custom-scroll overflow-y-auto",
+          // Adjust max-height based on active state for smooth transition
+          active ? "max-h-[60vh] lg:max-h-[65vh]" : "max-h-[200px] lg:max-h-[250px]",
+          "transition-[max-height] duration-500 ease-in-out" // Smooth transition for height change
+        )}
+      >
         {conversation.map((entry, idx) => {
           // Parse AI messages for document ID during rendering
           const parsedMessage = entry.from === 'ai' && entry.message
             ? parseMessageForDocument(entry.message)
             : { text: entry.message || '', documentId: null };
 
+          // --- REMOVED Temporary Testing Code Block ---
+          // The block that forced a documentId for idx === 1 is removed.
+
           return (
-            <div key={`${entry.from}-${idx}`} className={`flex ${entry.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`inline-block p-2 px-3 rounded-lg max-w-[85%] lg:max-w-[75%] break-words ${
+            <div key={`${entry.from}-${idx}-${parsedMessage.documentId || 'no-doc'}`} className={`flex ${entry.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={cn(
+                `inline-block p-2 px-3 rounded-lg max-w-[85%] lg:max-w-[75%] break-words`,
                 entry.from === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white'
-              }`}>
+              )}>
                 {/* Render cleaned message text */}
                 {parsedMessage.text && <p>{parsedMessage.text}</p>}
 
@@ -358,7 +387,7 @@ export const VanishInput: React.FC<VanishInputProps> = ({
                   </div>
                 )}
 
-                {/* --- NEW: Render PdfPreview if documentId exists --- */}
+                {/* Render PdfPreview if documentId exists */}
                 {parsedMessage.documentId && (
                   <PdfPreview
                     documentId={parsedMessage.documentId}
@@ -366,17 +395,12 @@ export const VanishInput: React.FC<VanishInputProps> = ({
                     className="ml-2 align-middle" // Basic styling for positioning
                   />
                 )}
-                {/* --- End PdfPreview Rendering --- */}
-
-                {/* --- REMOVED: Old iFrame Rendering Logic --- */}
-                {/* The old iframe rendering block has been removed. */}
-
               </div>
             </div>
           );
         })}
-        {/* Empty div at the end to help with scrolling */}
-        <div ref={conversationEndRef} />
+        {/* Empty div at the end to help ensure the last message is fully visible when scrolling */}
+        <div ref={conversationEndRef} style={{ height: '1px' }} />
       </div>
 
       {/* Input Area */}
@@ -390,35 +414,47 @@ export const VanishInput: React.FC<VanishInputProps> = ({
           value={inputData.data}
           required={required}
           type={type}
-          placeholder={conversation.length === 0 ? placeholder : "Type your message..."} // More specific placeholder after conversation starts
-          className={`placeholder-white/60 text-center w-full max-w-[600px] text-[16px] lg:text-[18px] py-3 px-4 text-white outline-none bg-transparent border-b-2 ${isFocused ? 'border-white' : 'border-white/30'} transition-colors duration-300 ${conversation.length > 0 && 'bg-white/5 rounded-t-lg border-b-0'}`} // Style adjustments
+          placeholder={conversation.length === 0 ? placeholder : "Type your message..."}
+          className={cn(
+            `placeholder-white/60 text-center w-full max-w-[600px] text-[16px] lg:text-[18px]`,
+            `py-3 px-4 text-white outline-none bg-transparent`,
+            `border-b-2 transition-colors duration-300`,
+            isFocused ? 'border-white' : 'border-white/30',
+            // Apply different style when conversation has started and input is active
+            active && conversation.length > 0 && 'bg-white/5 rounded-t-lg border-b-0'
+          )}
           disabled={loading} // Disable input while AI is responding
         />
-        {/* Blinking caret simulation (optional, consider CSS caret-color) */}
+        {/* Optional: Blinking caret simulation (CSS preferred: caret-color: white;) */}
         {/* {showCaret && isFocused && <span className="absolute right-[calc(50%-290px)] top-1/2 transform -translate-y-1/2 h-5 w-px bg-white animate-blink"></span>} */}
       </div>
 
       {/* Send Button Area */}
-      <div className="flex justify-center items-center gap-4 py-4 lg:py-8 hover:scale-105 cursor-pointer duration-300 transition-all" onClick={sendMessage}>
+      <div
+        className={cn(
+          "flex justify-center items-center gap-4 py-4 lg:py-8 cursor-pointer duration-300 transition-all",
+          loading ? "opacity-50 cursor-not-allowed" : "hover:scale-105" // Dim and disable cursor when loading
+        )}
+        onClick={!loading ? sendMessage : undefined} // Only allow click if not loading
+        aria-disabled={loading} // Accessibility attribute for disabled state
+      >
         <div className="bg-text-secondary/30 leading-normal text-[18px] w-[32px] h-[32px] relative rounded-md flex items-center justify-center">
           <IoReturnDownForwardSharp className="text-white" />
         </div>
         <p className="text-[14px] lg:text-[18px] text-white uppercase mt-1">to send</p>
       </div>
 
-      {/* --- Render PdfPopup conditionally --- */}
+      {/* Render PdfPopup conditionally */}
       <PdfPopup
         isOpen={isPopupOpen}
         documentId={currentDocumentId}
         onClose={closePdfPopup}
       />
-      {/* --- End PdfPopup Rendering --- */}
     </div>
   );
 };
 
-// Helper animation class for caret (if not using CSS caret-color)
-// Add this to your globals.css or a relevant CSS file if needed:
+// Optional: Add CSS for the blinking caret if not using caret-color
 /*
 @keyframes blink {
   0%, 100% { opacity: 1; }
@@ -426,5 +462,12 @@ export const VanishInput: React.FC<VanishInputProps> = ({
 }
 .animate-blink {
   animation: blink 1.2s step-end infinite;
+}
+*/
+
+// Optional: Add CSS for chat active state transitions if needed
+/*
+.chat-active {
+  // Styles for when the chat is expanded
 }
 */
