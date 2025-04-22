@@ -70,8 +70,8 @@
     -   **Step Dependencies**: Step 9
     -   **User Instructions**: None
 
--   [ ] Step 11: Final Testing and Review
-    -   **Task**: Manually test the complete user flow to ensure seamless integration and functionality according to the project request and technical specification. **Verify the popup has no header and the footer Close button works as expected.**
+-   [ x] Step 11: Final Testing and Review (TO BE TESTED MORE _ DONE FOR NOW)
+    -   **Task**: Manually test the complete user flow to ensure seamless integration and functionality according to the project request and technical specification.
     -   **Files**: N/A (Testing Step)
     -   **Step Dependencies**: Step 10
     -   **User Instructions**:
@@ -80,14 +80,14 @@
         3.  Verify the message appears correctly without the tags.
         4.  Verify the `PdfPreview` icon appears next to the message.
         5.  Hover over and click the `PdfPreview` icon.
-        6.  Verify the `PdfPopup` modal opens smoothly with a blurred background **and no header title**.
-        7.  Verify the loading indicator appears briefly.
-        8.  Verify the PDF document renders correctly.
-        9.  Test the "Download" button.
-        10. **Test the footer "Close" button – it should close the modal smoothly.**
+        6.  Verify the `PdfPopup` modal opens smoothly with a blurred background.
+        7.  Verify the loading indicator appears briefly (if the PDF loads quickly) or stays longer for larger files.
+        8.  Verify the PDF document renders correctly within the iframe.
+        9.  Test the "Download" button – it should initiate a download of the PDF.
+        10. Test the "Close" button (X icon) – it should close the modal smoothly.
         11. Test clicking outside the modal (if not prevented) – it should close the modal.
-        12. Test responsiveness.
-        13. (Optional) Test error state.
+        12. Test responsiveness by resizing the browser window or using developer tools to simulate different devices (desktop, tablet, mobile). Check modal layout and PDF readability.
+        13. (Optional) Simulate an error by temporarily modifying the `/api/pandadoc` route or providing an invalid `documentId` to check the error state UI in the popup.
 
 -   [ ] Step 12: Remove Temporary Testing Code **(New Step)**
     -   **Task**: Remove any temporary code, placeholders, or hardcoded values added specifically for testing during development. This includes the placeholder document ID logic in `VanishInput.tsx`.
