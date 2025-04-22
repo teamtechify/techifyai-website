@@ -33,15 +33,15 @@
  */
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Image from "next/image";
+import React, { useEffect, useRef, useState } from "react";
 import { IoReturnDownForwardSharp } from "react-icons/io5";
-import './index.css';
 import { v4 as uuidv4 } from 'uuid';
+import './index.css';
 // Import the new PDF components
-import { PdfPreview } from '@/components/pdf/PdfPreview';
 import { PdfPopup } from '@/components/pdf/PdfPopup';
+import { PdfPreview } from '@/components/pdf/PdfPreview';
 import { cn } from '@/lib/utils'; // Ensure cn is imported
 
 /**
@@ -213,10 +213,10 @@ export const VanishInput: React.FC<VanishInputProps> = ({
       // Use setTimeout to defer execution until after the render cycle
       setTimeout(() => {
         if (scrollContainerRef.current) {
-           scrollContainerRef.current.scrollTo({
-             top: scrollContainerRef.current.scrollHeight,
-             behavior: 'smooth' // Use smooth scrolling
-           });
+          scrollContainerRef.current.scrollTo({
+            top: scrollContainerRef.current.scrollHeight,
+            behavior: 'smooth' // Use smooth scrolling
+          });
         }
       }, 0);
     }
@@ -270,7 +270,7 @@ export const VanishInput: React.FC<VanishInputProps> = ({
       const steps = response.data.steps;
 
       // Parse the steps from the Voiceflow response into ConversationEntry format
-      const parsedAiResponses = steps.map((step: any): ConversationEntry | null => {
+      const parsedAiResponses = steps.map((step: { type: string; payload?: { message?: string; image?: string } }): ConversationEntry | null => {
         if ((step.type === "speak" || step.type === "text") && step.payload?.message) {
           // Message content will be parsed for document ID during rendering
           return { from: "ai", message: step.payload.message };
@@ -279,7 +279,7 @@ export const VanishInput: React.FC<VanishInputProps> = ({
           return { from: "ai", image: step.payload.image };
         }
         return null; // Ignore other step types
-      }).filter((entry): entry is ConversationEntry => entry !== null); // Filter out nulls and assert type
+      }).filter((entry: ConversationEntry | null): entry is ConversationEntry => entry !== null); // Filter out nulls and assert type
 
       // Update conversation: remove the "thinking" message and add the actual AI responses
       setConversation(prev => [

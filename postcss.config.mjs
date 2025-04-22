@@ -1,7 +1,7 @@
 const config = {
   plugins: {
     "@tailwindcss/postcss": {
-      plugins: [require("tailwindcss-animate")],
+      plugins: [await import("tailwindcss-animate")],
     },
   },
 };

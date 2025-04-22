@@ -1,14 +1,14 @@
 'use client'
 
 import { FadeInComponent } from "@/components/animations"
-import { BannerSection } from "./banner"
-import { ChatSection } from "./chat"
 import { useState } from "react"
 import { FaX } from "react-icons/fa6"
+import { BannerSection } from "./banner"
+import { ChatSection } from "./chat"
 
 export const NovaSections = () => {
   const [isActive, setIsActive] = useState(false)
-  const [selectedServices, setSelectedServices] = useState([])
+  const [selectedServices, setSelectedServices] = useState<string[]>([])
 
   // console.log(selectedServices)
 
@@ -26,9 +26,8 @@ export const NovaSections = () => {
 
       {/* Fixed-position animated container */}
       <div
-        className={`fixed inset-0 bg-black z-[100] transition-transform duration-700 ease-in-out overflow-y-scroll ${
-          isActive ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 bg-black z-[100] transition-transform duration-700 ease-in-out overflow-y-scroll ${isActive ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+          }`}
       >
         {isActive && (
           <div
