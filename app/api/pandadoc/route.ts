@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Use the correct environment variable name as defined in the project's .env setup
-const PANDADOC_API_KEY = process.env.PANDADOC_API_KEY;
+const PANDA_DOC_API_KEY = process.env.PANDA_DOC_API_KEY;
 
 export async function GET(req: NextRequest) {
   // Check if the API key is loaded from environment variables
-  if (!PANDADOC_API_KEY) {
-    console.error("PANDADOC_API_KEY environment variable is not set.");
+  if (!PANDA_DOC_API_KEY) {
+    console.error("PANDA_DOC_API_KEY environment variable is not set.");
     return NextResponse.json({ error: "Server configuration error: PandaDoc API Key missing." }, { status: 500 });
   }
 
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const downloadRes = await fetch(`https://api.pandadoc.com/public/v1/documents/${documentId}/download`, {
       method: 'GET',
       headers: {
-        Authorization: `API-Key ${PANDADOC_API_KEY}`,
+        Authorization: `API-Key ${PANDA_DOC_API_KEY}`,
         Accept: 'application/pdf',
       }
     });

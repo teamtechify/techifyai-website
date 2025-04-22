@@ -90,8 +90,8 @@ A `.env.local` file is required for development. Obtain the necessary API keys a
 -   `CAL_API_KEY`: For Cal.com API access.
 -   `CAL_KEY`: Another key likely for Cal.com (verify specific usage).
 -   `CAL_EVENT_TYPE_ID`: The specific Cal.com event type for booking.
--   `API_KEY`: Voiceflow API Key for Nova chat.
--   `PANDADOC_API_KEY`: For accessing PandaDoc documents (if used by Nova).
+-   `VOICEFLOW_API_KEY`: Voiceflow API Key for Nova chat.
+-   `PANDA_DOC_API_KEY`: For accessing PandaDoc documents (if used by Nova).
 
 Ensure server-side keys are **not** prefixed with `NEXT_PUBLIC_`.
 
