@@ -55,7 +55,7 @@
 
 ## Phase 3: Interactivity and Refinements
 
--   [ ] Step 8: Implement Loading and Error Handling in `PdfPopup`
+-   [ x] Step 8: Implement Loading and Error Handling in `PdfPopup`
     -   **Task**: Add state and logic to `PdfPopup` to handle the loading state of the iframe and potential errors when fetching/displaying the PDF. Display appropriate UI feedback.
     -   **Files**:
         -   `components/pdf/PdfPopup.tsx`: Import `useState`, `useEffect`, `useCallback`, `Skeleton` from `@/components/ui/skeleton` (optional), and `AlertTriangle` from `lucide-react`. Add state variables: `const [isLoading, setIsLoading] = useState(true);` and `const [loadError, setLoadError] = useState<string | null>(null);`. Add `useEffect` hook to reset `isLoading` and `loadError` when `isOpen` or `documentId` changes. Create `handleIframeLoad = useCallback(...)` to set `isLoading` false and `loadError` null. Create `handleIframeError = useCallback(...)` to set `isLoading` false and set an error message to `loadError`. Attach these handlers to the `iframe`'s `onLoad` and `onError` attributes. Conditionally render a loading indicator (e.g., `<Skeleton className="absolute inset-0 h-full w-full" />` or a spinner) inside the main content area when `isLoading` is true. Conditionally render an error message UI (using `AlertTriangle`, text) when `loadError` is not null and `isLoading` is false. Use `cn` on the `iframe` to add `invisible` class when `isLoading` or `loadError` is true, and `visible` otherwise. Disable the Download button if `!pdfUrl`, `isLoading`, or `loadError` is true.
