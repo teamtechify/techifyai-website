@@ -4,7 +4,8 @@
  * This component renders a modal dialog for displaying PDF documents fetched via an iframe.
  * It utilizes the Shadcn UI Dialog component for structure, accessibility, and animations.
  * The modal displays the PDF specified by `documentId`, provides download and close actions,
- * and handles loading and error states for the iframe content.
+ * and handles loading and error states for the iframe content. Styling is applied using
+ * Tailwind CSS for responsiveness and visual consistency, including a blurred backdrop.
  *
  * @dependencies
  * - React (useState, useEffect, useCallback): For component state, side effects, and memoized callbacks.
@@ -27,6 +28,8 @@
  * - Conditionally renders a Skeleton loader or an error message based on iframe status.
  * - Hides the iframe visually until loaded successfully to prevent showing a broken state.
  * - Disables the download button during loading or if an error occurs.
+ * - Implements responsive design for various screen sizes.
+ * - Applies a backdrop blur effect to the overlay.
  */
 "use client";
 
@@ -35,15 +38,13 @@ import {
   Dialog,
   DialogContent,
   DialogOverlay,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
+  DialogClose, // Keep DialogClose for the footer button
   DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/ui/dialog'; // Removed DialogHeader, DialogTitle as per revised plan
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton for loading state
-import { X, Download, AlertTriangle } from 'lucide-react'; // Import icons
-import { cn } from '@/lib/utils'; // Import cn utility
+import { Skeleton } from '@/components/ui/skeleton';
+import { X, Download, AlertTriangle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 /**
  * Props interface for the PdfPopup component.
@@ -60,17 +61,15 @@ interface PdfPopupProps {
 /**
  * PdfPopup Component
  *
- * Renders a modal dialog structure for displaying PDF documents via an iframe.
- * Includes header with title and close button, iframe container with loading/error handling,
- * and footer with download button.
+ * Renders a responsive modal dialog for displaying PDF documents via an iframe.
+ * Includes iframe container with loading/error handling, and footer with download/close buttons.
+ * Features a blurred backdrop overlay.
  *
  * @param {PdfPopupProps} props - The component props.
  * @returns {JSX.Element} The rendered component.
  */
 export const PdfPopup: React.FC<PdfPopupProps> = ({ isOpen, documentId, onClose }) => {
-  // State to track if the iframe content is loading
   const [isLoading, setIsLoading] = useState(true);
-  // State to store any error message during loading
   const [loadError, setLoadError] = useState<string | null>(null);
 
   /**
@@ -79,33 +78,29 @@ export const PdfPopup: React.FC<PdfPopupProps> = ({ isOpen, documentId, onClose 
    */
   useEffect(() => {
     if (isOpen && documentId) {
-      // When modal opens with a valid document ID, start loading
       setIsLoading(true);
       setLoadError(null);
     } else {
-      // Reset state when closing or if document ID is null
-      setIsLoading(false); // No need to show loading if closed or no ID
+      setIsLoading(false);
       setLoadError(null);
     }
-  }, [isOpen, documentId]); // Dependencies: run effect when these change
+  }, [isOpen, documentId]);
 
   /**
    * Callback handler for the iframe's onLoad event.
-   * Sets loading to false and clears any previous error.
    */
   const handleIframeLoad = useCallback(() => {
     setIsLoading(false);
     setLoadError(null);
-  }, []); // No dependencies, function identity is stable
+  }, []);
 
   /**
    * Callback handler for the iframe's onError event.
-   * Sets loading to false and sets a user-friendly error message.
    */
   const handleIframeError = useCallback(() => {
     setIsLoading(false);
     setLoadError("Document could not be loaded at this time. Please try again later or contact support.");
-  }, []); // No dependencies, function identity is stable
+  }, []);
 
   /**
    * Handler for when the Shadcn Dialog component signals a request to change its open state.
@@ -118,44 +113,38 @@ export const PdfPopup: React.FC<PdfPopupProps> = ({ isOpen, documentId, onClose 
     }
   };
 
-  // Construct the URL for the iframe source based on the documentId
+  // Construct the URL for the iframe source
   const pdfUrl = documentId ? `/api/pandadoc?documentId=${documentId}` : '';
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      {/* DialogOverlay: Provides the background overlay. Styling (e.g., backdrop blur) will be added later. */}
-      <DialogOverlay className="fixed inset-0 z-50 bg-black/50" /> {/* Basic overlay */}
+      {/* DialogOverlay: Blurred background overlay */}
+      <DialogOverlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md" />
 
-      {/* DialogContent: The main container for the modal content. */}
+      {/* DialogContent: Main modal container */}
       <DialogContent
         className={cn(
           // Base Shadcn styles + custom layout
-          "fixed left-1/2 top-1/2 z-50 grid w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg",
-          // Custom layout: flex column, responsive height
-          "h-[90vh] md:h-[85vh] flex flex-col"
+          "fixed left-1/2 top-1/2 z-50 grid w-full max-w-4xl", // Increased max-width
+          "-translate-x-1/2 -translate-y-1/2 border bg-background shadow-lg duration-200",
+          "sm:rounded-lg",
+          // Custom layout: flex column, responsive height, remove default gap, adjust padding
+          "h-[90vh] md:h-[85vh] flex flex-col p-0 sm:p-6" // Remove padding for edge-to-edge on mobile
         )}
         // Prevent closing on clicking outside the content area if desired
         // onInteractOutside={(e) => e.preventDefault()}
       >
-        {/* Modal Header */}
-        <DialogHeader className="flex flex-row justify-between items-center space-y-0 pr-6"> {/* Adjusted padding for close button */}
-          <DialogTitle className="text-lg font-semibold text-foreground">Document Viewer</DialogTitle>
-          <DialogClose asChild>
-            <Button variant="ghost" size="icon" aria-label="Close">
-              <X className="h-4 w-4" />
-            </Button>
-          </DialogClose>
-        </DialogHeader>
+        {/* No DialogHeader as per revised plan */}
 
-        {/* Main Content Area (for iframe, loading, error states) */}
-        <div className="flex-grow overflow-hidden relative border border-border rounded-md">
+        {/* Main Content Area (iframe container) */}
+        <div className={cn(
+            "flex-grow overflow-hidden relative border border-border rounded-md",
+            "m-6 mb-0 sm:m-0 sm:mb-0" // Add margin for spacing on mobile, remove on larger screens
+            )}>
           {/* Loading State: Show Skeleton */}
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-muted">
-              {/* Using Skeleton for a placeholder loading UI */}
               <Skeleton className="h-full w-full" />
-              {/* Alternative: Simple Spinner (requires installing a spinner library or CSS) */}
-              {/* <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div> */}
             </div>
           )}
 
@@ -169,39 +158,49 @@ export const PdfPopup: React.FC<PdfPopupProps> = ({ isOpen, documentId, onClose 
           )}
 
           {/* Iframe for PDF Display */}
-          {pdfUrl && ( // Only render iframe if URL is valid
+          {pdfUrl && (
             <iframe
               src={pdfUrl}
-              title={`PDF Document Viewer${documentId ? ` - ${documentId}` : ''}`} // Descriptive title
+              title={`PDF Document Viewer${documentId ? ` - ${documentId}` : ''}`}
               className={cn(
-                "w-full h-full border-0",
-                // Hide iframe visually until loaded successfully or if there's an error
-                (isLoading || loadError) ? 'invisible' : 'visible'
+                "w-full h-full border-0", // Ensure iframe fills container
+                (isLoading || loadError) ? 'invisible' : 'visible' // Hide until loaded/error
               )}
-              onLoad={handleIframeLoad} // Attach load handler
-              onError={handleIframeError} // Attach error handler
-              allow="fullscreen" // Allow fullscreen mode for the PDF viewer
+              onLoad={handleIframeLoad}
+              onError={handleIframeError}
+              allow="fullscreen"
             />
           )}
-          {!pdfUrl && !isLoading && !loadError && ( // Show message if no document ID and not loading/error
+          {!pdfUrl && !isLoading && !loadError && (
              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
                 No document selected or available.
              </div>
           )}
         </div>
 
-        {/* Modal Footer */}
-        <DialogFooter className="sm:justify-end mt-4"> {/* Added margin-top */}
+        {/* Modal Footer with Download and Close buttons */}
+        <DialogFooter className={cn(
+            "mt-4 flex sm:justify-between items-center gap-2", // Use flex, space between on larger screens, gap for stacking
+            "px-6 pb-6 sm:px-0 sm:pb-0" // Add padding for spacing on mobile, remove on larger screens
+            )}>
+          {/* Download Button */}
           <Button
             asChild
             variant="default"
-            // Disable download button if no URL, loading, or error occurred
+            size="sm" // Smaller button size
             disabled={!pdfUrl || isLoading || !!loadError}
           >
-            <a href={pdfUrl} download={`document-${documentId || 'file'}.pdf`}> {/* Dynamic download filename */}
+            <a href={pdfUrl} download={`document-${documentId || 'file'}.pdf`}>
               <Download className="mr-2 h-4 w-4" /> Download
             </a>
           </Button>
+
+          {/* Close Button (using DialogClose for built-in functionality) */}
+          <DialogClose asChild>
+            <Button variant="outline" size="sm"> {/* Outline variant for secondary action */}
+              <X className="mr-2 h-4 w-4" /> Close
+            </Button>
+          </DialogClose>
         </DialogFooter>
       </DialogContent>
     </Dialog>

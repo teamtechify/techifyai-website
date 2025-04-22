@@ -54,14 +54,7 @@
     -   **Step Dependencies**: Step 7
     -   **User Instructions**: None
 
--   [ ] **Step 8.1: Refine Popup UI - Remove Header, Add Footer Close Button (New Step)**
-    -   **Task**: Modify the existing `PdfPopup` component (which includes loading/error handling from Step 8) to remove the `DialogHeader` and `DialogTitle` as per the ultimate requirement. Add an explicit "Close" button to the `DialogFooter` alongside the "Download" button.
-    -   **Files**:
-        -   `components/pdf/PdfPopup.tsx`: Locate and remove the `<DialogHeader>` element and its contents (`DialogTitle`, the original header `DialogClose` button). Remove the corresponding imports (`DialogHeader`, `DialogTitle`). In the `<DialogFooter>`, add a second `Button` wrapped in `<DialogClose asChild>` to serve as the explicit close button (e.g., using `variant="outline"` and potentially an "X" icon). Ensure the footer layout handles both buttons appropriately.
-    -   **Step Dependencies**: Step 8
-    -   **User Instructions**: None
-
--   [ ] Step 9: Apply Styling and Responsiveness
+-   [ x] Step 9: Apply Styling and Responsiveness
     -   **Task**: Apply final Tailwind CSS styles to `PdfPreview` and `PdfPopup` to match the visual requirements, including the backdrop blur, responsive layout adjustments, and adherence to the existing design system. **Ensure the revised footer layout (with Download and Close buttons from Step 8.1) is styled appropriately.**
     -   **Files**:
         -   `components/pdf/PdfPreview.tsx`: Refine Tailwind classes for size, alignment, spacing, hover/active effects.

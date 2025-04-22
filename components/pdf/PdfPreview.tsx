@@ -4,7 +4,8 @@
  * This component renders a clickable preview icon (using lucide-react's FileText)
  * for PDF documents within the chat interface. It receives a document ID and an
  * onClick handler to trigger the opening of a PDF viewer modal. It provides visual
- * feedback on hover and focus for better usability and accessibility.
+ * feedback on hover and focus for better usability and accessibility, styled with
+ * Tailwind CSS to match the application's design system.
  *
  * @dependencies
  * - React: For component structure.
@@ -44,6 +45,7 @@ interface PdfPreviewProps {
  * PdfPreview Component
  *
  * Renders a clickable PDF icon button. Clicking it triggers the provided onClick handler.
+ * Styled for visual consistency and responsiveness within the chat interface.
  *
  * @param {PdfPreviewProps} props - The component props.
  * @returns {JSX.Element} The rendered button component.
@@ -61,8 +63,7 @@ export const PdfPreview: React.FC<PdfPreviewProps> = ({ documentId, onClick, cla
     <button
       type="button" // Explicitly set button type for accessibility
       onClick={handleClick}
-      // Provide a descriptive label for screen readers, including the document ID if possible
-      // Consider if a more user-friendly identifier than the raw ID is available/preferable
+      // Provide a descriptive label for screen readers
       aria-label={`View PDF document ${documentId}`}
       className={cn(
         // Base styles: inline flex container, centered items, padding, rounded corners, text color
@@ -76,13 +77,13 @@ export const PdfPreview: React.FC<PdfPreviewProps> = ({ documentId, onClick, cla
         // Focus states: remove default outline, add visible ring using Shadcn variables
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background',
         // Vertical alignment and margin (useful when placed next to text)
-        'ml-2 align-middle',
+        'ml-2 align-middle', // Ensure vertical alignment with text
         // Merge with any additional classes passed via props
         className
       )}
     >
       {/* Render the PDF icon */}
-      <FileText className="h-5 w-5" /> {/* Adjust size as needed */}
+      <FileText className="h-5 w-5" /> {/* Icon size */}
       {/* Screen reader only text for additional context */}
       <span className="sr-only">View PDF</span>
     </button>
