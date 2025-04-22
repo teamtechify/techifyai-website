@@ -1,18 +1,9 @@
 /**
  * @file PdfPreview.tsx
  * @description
- * This component renders a clickable preview icon (using lucide-react's FileText)
- * for PDF documents within the chat interface. It receives a document ID and an
- * onClick handler to trigger the opening of a PDF viewer modal. It provides visual
- * feedback on hover and focus for better usability and accessibility, styled with
- * Tailwind CSS to match the application's design system.
- *
- * Accessibility Notes (Step 10):
- * - Uses a semantic <button> element.
- * - Includes an `aria-label` providing context about the action and document ID.
- * - Includes screen-reader-only text for additional context.
- * - Utilizes Tailwind's `focus-visible` utilities to ensure clear focus states for keyboard navigation,
- *   integrating with Shadcn's ring styles.
+ * Renders a clickable preview button (Telegram-style) for PDF documents within the chat interface.
+ * Triggers the provided onClick handler with the document ID.
+ * Includes accessibility features like aria-label and focus states.
  *
  * @dependencies
  * - React: For component structure.
@@ -24,10 +15,6 @@
  * - onClick (function): Callback function triggered when the preview icon is clicked.
  *                       It receives the documentId as an argument.
  * - className (string, optional): Additional CSS classes for custom styling.
- *
- * @notes
- * - Marked as a client component ("use client") because it handles user interaction (onClick).
- * - Styling uses Tailwind CSS utility classes for consistency with the project's design system.
  */
 "use client";
 
@@ -50,8 +37,8 @@ interface PdfPreviewProps {
 /**
  * PdfPreview Component
  *
- * Renders a clickable PDF icon button. Clicking it triggers the provided onClick handler.
- * Styled for visual consistency and responsiveness within the chat interface.
+ * Renders a clickable PDF icon button in a Telegram-inspired style.
+ * Clicking it triggers the provided onClick handler.
  * Ensures accessibility through proper labeling and focus management.
  *
  * @param {PdfPreviewProps} props - The component props.
@@ -71,31 +58,36 @@ export const PdfPreview: React.FC<PdfPreviewProps> = ({ documentId, onClick, cla
 
   return (
     <button
-      type="button" // Explicitly set button type for accessibility
+      type="button" // Explicitly set button type
       onClick={handleClick}
-      aria-label={ariaLabel} // Use the descriptive aria-label
+      aria-label={ariaLabel} // Descriptive aria-label
       className={cn(
-        // Base styles: inline flex container, centered items, padding, rounded corners, text color
-        'inline-flex items-center justify-center p-1 rounded text-white',
-        // Hover states: change text color and add subtle background
-        'hover:text-blue-300 hover:bg-white/10',
-        // Active state: slight opacity reduction on click
-        'active:opacity-80',
+        // Base styling - Telegram style: inline flex, gap, padding, rounded, background, text, border
+        'inline-flex items-center gap-2 p-1.5 rounded-md',
+        'bg-gray-700/80 text-white', // Slightly transparent background
+        'border border-gray-600/50', // Subtle border
+        // Hover states: slightly darker background and border
+        'hover:bg-gray-600/80 hover:border-gray-500/50',
+        // Active state: slight opacity reduction
+        'active:opacity-90',
         // Transitions for smooth visual feedback
         'transition-all duration-150',
-        // Focus states: remove default outline, add visible ring using Shadcn variables
-        // Tailwind's focus-visible ensures the ring only appears for keyboard navigation
+        // Focus states: visible ring using Shadcn variables
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background',
-        // Vertical alignment and margin (useful when placed next to text)
-        'ml-2 align-middle', // Ensure vertical alignment with text
+        // Margin when placed inline (e.g., after text)
+        'my-1', // Add some vertical margin
         // Merge with any additional classes passed via props
         className
       )}
     >
-      {/* Render the PDF icon */}
-      <FileText className="h-5 w-5" aria-hidden="true" /> {/* Hide decorative icon from screen readers */}
+      {/* PDF Icon */}
+      <FileText className="h-5 w-5 text-blue-400 flex-shrink-0" aria-hidden="true" /> {/* Hide decorative icon */}
+
+      {/* Simple label - no filename per client requirement */}
+      <span className="text-sm font-medium truncate">PDF Document</span>
+
       {/* Screen reader only text for additional context */}
-      <span className="sr-only">View PDF</span>
+      <span className="sr-only"> (Opens PDF viewer)</span>
     </button>
   );
 };
