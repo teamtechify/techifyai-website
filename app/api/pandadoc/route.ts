@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const PANDADOC_API_KEY = process.env.PANDADOC_API_KEY ?? 'df39615846fc8ecbdc3e61171cadb09886ffa95e';
+const PANDADOC_API_KEY = process.env.PANDADOC_API_KEY;
 
 export async function GET(req: NextRequest) {
+  // Check if the API key is loaded from environment variables
+  if (!PANDADOC_API_KEY) {
+    console.error("PANDADOC_API_KEY environment variable is not set.");
+    return NextResponse.json({ error: "Server configuration error: PandaDoc API Key missing." }, { status: 500 });
+  }
+
   const documentId = req.nextUrl.searchParams.get("documentId");
   if (!documentId) return NextResponse.json({ error: "Missing documentId" }, { status: 400 });
 
