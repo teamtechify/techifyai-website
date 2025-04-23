@@ -10,16 +10,15 @@
  */
 "use client";
 
-import axios from "axios";
-import Image from "next/image";
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import { IoReturnDownForwardSharp } from "react-icons/io5";
-import { v4 as uuidv4 } from 'uuid';
-import Pusher from 'pusher-js'; // Import Pusher client library
-import './index.css';
-import { PdfPopup } from '@/components/pdf/PdfPopup';
 import { PdfPreview } from '@/components/pdf/PdfPreview';
 import { cn } from '@/lib/utils';
+import axios from "axios";
+import Image from "next/image";
+import Pusher from 'pusher-js'; // Import Pusher client library
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { IoReturnDownForwardSharp } from "react-icons/io5";
+import { v4 as uuidv4 } from 'uuid';
+import './index.css';
 
 /**
  * @hook useSessionUserId
@@ -114,21 +113,7 @@ export const VanishInput: React.FC<VanishInputProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const conversationEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
-  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
   const pusherClientRef = useRef<Pusher | null>(null); // Ref to hold the Pusher client instance
-
-  const openPdfPopup = useCallback((docId: string) => {
-    console.log(`Opening PDF popup for document: ${docId}`);
-    setCurrentDocumentId(docId);
-    setIsPopupOpen(true);
-  }, []);
-
-  const closePdfPopup = useCallback(() => {
-    console.log("Closing PDF popup.");
-    setIsPopupOpen(false);
-    setCurrentDocumentId(null);
-  }, []);
 
   const arrayToCommaString = (items: string[]): string => items.join(", ");
 
@@ -233,8 +218,8 @@ export const VanishInput: React.FC<VanishInputProps> = ({
     const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
 
     if (!pusherKey || !pusherCluster) {
-        console.error("Pusher Error: NEXT_PUBLIC_PUSHER_KEY or NEXT_PUBLIC_PUSHER_CLUSTER is not defined in environment variables.");
-        return; // Don't attempt to connect without keys
+      console.error("Pusher Error: NEXT_PUBLIC_PUSHER_KEY or NEXT_PUBLIC_PUSHER_CLUSTER is not defined in environment variables.");
+      return; // Don't attempt to connect without keys
     }
 
     // Avoid reconnecting if already connected
@@ -245,68 +230,68 @@ export const VanishInput: React.FC<VanishInputProps> = ({
 
     console.log("Pusher: Initializing connection...");
     try {
-        const pusherClient = new Pusher(pusherKey, {
-            cluster: pusherCluster,
-            // encrypted: true, // default is true for TLS
-        });
-        pusherClientRef.current = pusherClient; // Store the instance
+      const pusherClient = new Pusher(pusherKey, {
+        cluster: pusherCluster,
+        // encrypted: true, // default is true for TLS
+      });
+      pusherClientRef.current = pusherClient; // Store the instance
 
-        const channelName = `user-${userId}`;
-        console.log(`Pusher: Subscribing to channel: ${channelName}`);
-        const channel = pusherClient.subscribe(channelName);
+      const channelName = `user-${userId}`;
+      console.log(`Pusher: Subscribing to channel: ${channelName}`);
+      const channel = pusherClient.subscribe(channelName);
 
-        // --- Bind Event Handlers ---
-        channel.bind('document-ready', (data: { documentID: string }) => {
-          console.log(`Pusher: Received document-ready event for user ${userId}:`, data);
-          if (data.documentID) {
-            // Update conversation state
-            setConversation(prev => [
-              ...prev,
-              // 1. Fixed message
-              { from: 'ai', message: 'Here is your PDF for review:' },
-              // 2. Message with only the document tag for PdfPreview rendering
-              { from: 'ai', message: `<DOCUMENTID>${data.documentID}</DOCUMENTID>` }
-            ]);
-            // Ensure scroll happens after state update
-            scrollToBottom();
-          } else {
-            console.warn("Pusher: Received document-ready event without documentID:", data);
-          }
-        });
+      // --- Bind Event Handlers ---
+      channel.bind('document-ready', (data: { documentID: string }) => {
+        console.log(`Pusher: Received document-ready event for user ${userId}:`, data);
+        if (data.documentID) {
+          // Update conversation state
+          setConversation(prev => [
+            ...prev,
+            // 1. Fixed message
+            { from: 'ai', message: 'Here is your PDF for review:' },
+            // 2. Message with only the document tag for PdfPreview rendering
+            { from: 'ai', message: `<DOCUMENTID>${data.documentID}</DOCUMENTID>` }
+          ]);
+          // Ensure scroll happens after state update
+          scrollToBottom();
+        } else {
+          console.warn("Pusher: Received document-ready event without documentID:", data);
+        }
+      });
 
-        channel.bind('pusher:subscription_succeeded', () => {
-          console.log(`Pusher: Successfully subscribed to channel: ${channelName}`);
-        });
+      channel.bind('pusher:subscription_succeeded', () => {
+        console.log(`Pusher: Successfully subscribed to channel: ${channelName}`);
+      });
 
-        channel.bind('pusher:subscription_error', (status: any) => {
-          console.error(`Pusher: Failed to subscribe to channel ${channelName}:`, status);
-          // Optional: Implement retry logic or notify user
-        });
+      channel.bind('pusher:subscription_error', (status: any) => {
+        console.error(`Pusher: Failed to subscribe to channel ${channelName}:`, status);
+        // Optional: Implement retry logic or notify user
+      });
 
-        channel.bind('pusher:connection_error', (err: any) => {
-            console.error("Pusher: Connection Error:", err);
-        });
+      channel.bind('pusher:connection_error', (err: any) => {
+        console.error("Pusher: Connection Error:", err);
+      });
 
-        pusherClient.connection.bind('connected', () => {
-            console.log("Pusher: Connection established.");
-        });
+      pusherClient.connection.bind('connected', () => {
+        console.log("Pusher: Connection established.");
+      });
 
-        pusherClient.connection.bind('disconnected', () => {
-            console.warn("Pusher: Connection disconnected.");
-        });
+      pusherClient.connection.bind('disconnected', () => {
+        console.warn("Pusher: Connection disconnected.");
+      });
 
-        // --- Cleanup Function ---
-        return () => {
-          if (pusherClientRef.current) {
-            console.log(`Pusher: Unsubscribing from channel ${channelName} and disconnecting.`);
-            pusherClientRef.current.unsubscribe(channelName);
-            pusherClientRef.current.disconnect();
-            pusherClientRef.current = null; // Clear the ref
-          }
-        };
+      // --- Cleanup Function ---
+      return () => {
+        if (pusherClientRef.current) {
+          console.log(`Pusher: Unsubscribing from channel ${channelName} and disconnecting.`);
+          pusherClientRef.current.unsubscribe(channelName);
+          pusherClientRef.current.disconnect();
+          pusherClientRef.current = null; // Clear the ref
+        }
+      };
 
     } catch (error) {
-        console.error("Pusher: Failed to initialize client:", error);
+      console.error("Pusher: Failed to initialize client:", error);
     }
 
   }, [userId, setConversation, scrollToBottom]); // Dependencies: userId, setConversation, scrollToBottom
@@ -355,8 +340,6 @@ export const VanishInput: React.FC<VanishInputProps> = ({
                 {parsedMessage.documentId && (
                   <PdfPreview
                     documentId={parsedMessage.documentId}
-                    onClick={openPdfPopup}
-                    // Add margin only if there's also text content above it in the same message bubble
                     className={parsedMessage.text && parsedMessage.text !== `<DOCUMENTID>${parsedMessage.documentId}</DOCUMENTID>` ? 'mt-2' : ''}
                   />
                 )}
@@ -410,12 +393,6 @@ export const VanishInput: React.FC<VanishInputProps> = ({
         <p className="text-[14px] lg:text-[18px] text-white uppercase mt-1">to send</p>
       </div>
 
-      {/* PDF Popup */}
-      <PdfPopup
-        isOpen={isPopupOpen}
-        documentId={currentDocumentId}
-        onClose={closePdfPopup}
-      />
     </div>
   );
 };
