@@ -1,53 +1,61 @@
 // app/api/plan/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import Pusher from 'pusher';
 
-/**
- * Interface for storing pending document data.
- */
-interface DocumentData {
-  documentID: string;
-  text?: string; // Optional accompanying text
-  timestamp: number; // Expiration timestamp (Date.now() + TTL)
+// Validate environment variables during initialization
+const appId = process.env.PUSHER_APP_ID;
+const key = process.env.PUSHER_KEY; // Server Key
+const secret = process.env.PUSHER_SECRET;
+const cluster = process.env.PUSHER_CLUSTER;
+
+if (!appId || !key || !secret || !cluster) {
+  console.error("FATAL ERROR: Pusher environment variables are not fully configured!");
+  // Optionally, throw an error during startup in production if needed
+  // throw new Error("Pusher environment variables must be set.");
 }
 
-// Use a Map for efficient in-memory storage (key: userID, value: DocumentData)
-// NOTE: This is in-memory and will be lost on server restart.
-// For production, consider using a database or persistent cache (e.g., Redis).
-const pendingDocuments = new Map<string, DocumentData>();
+// Initialize Pusher client (only if all variables are present)
+let pusher: Pusher | null = null;
+if (appId && key && secret && cluster) {
+  try {
+    pusher = new Pusher({
+      appId,
+      key,
+      secret,
+      cluster,
+      useTLS: true,
+    });
+    console.log("Pusher server initialized successfully.");
+  } catch (initError) {
+    console.error("Failed to initialize Pusher server:", initError);
+  }
+} else {
+    console.warn("Pusher server NOT initialized due to missing environment variables.");
+}
 
-const DOCUMENT_TTL_MS = 30 * 60 * 1000; // 30 minutes Time-To-Live for pending documents
 
 /**
- * Cleans up expired documents from the Map.
- */
-const cleanupExpiredDocuments = () => {
-  const now = Date.now();
-  let cleanedCount = 0;
-  for (const [userID, data] of pendingDocuments.entries()) {
-    if (data.timestamp < now) {
-      pendingDocuments.delete(userID);
-      cleanedCount++;
-    }
-  }
-  if (cleanedCount > 0) {
-    console.log(`Cleaned up ${cleanedCount} expired pending documents.`);
-  }
-};
-
-/**
- * Handles POST requests to store pending document notifications.
+ * Handles POST requests from n8n webhook to trigger a Pusher event.
  * Expects a JSON body with `userID` and `documentID`.
  */
 export async function POST(req: NextRequest) {
+  if (!pusher) {
+    console.error("Pusher server not initialized. Cannot process webhook.");
+    return NextResponse.json(
+        { success: false, error: "Internal Server Error: Notification system offline." },
+        { status: 503 } // Service Unavailable
+    );
+  }
+
   try {
     const body = await req.json();
-    // Log the raw body for debugging (consider redacting sensitive info in production)
+    // Log the raw body for debugging
     console.log("Webhook (/api/plan) POST received:", JSON.stringify(body));
 
-    // Extract data safely, assuming it might be nested or have different structures
+    // Extract data safely
     const userID = body?.userID || body?.data?.userID;
     const documentID = body?.documentID || body?.data?.documentID;
-    const text = body?.text || body?.data?.text; // Optional text
+    // const text = body?.text || body?.data?.text; // Text from webhook, though frontend ignores it now
 
     // Validate required fields
     if (!userID || !documentID) {
@@ -58,22 +66,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Store the document data with an expiration timestamp
-    const expirationTime = Date.now() + DOCUMENT_TTL_MS;
-    pendingDocuments.set(userID, {
-      documentID,
-      text: text, // Store text if provided
-      timestamp: expirationTime,
-    });
+    // --- Trigger Pusher Event ---
+    const channelName = `user-${userID}`; // User-specific channel
+    const eventName = 'document-ready';
+    const eventData = { documentID: documentID }; // Only send the ID
 
-    console.log(`Document ${documentID} stored for user ${userID}. Expires at ${new Date(expirationTime).toISOString()}.`);
+    console.log(`Attempting to trigger Pusher event for channel: ${channelName}, event: ${eventName}`);
 
-    // Optionally, run cleanup periodically or on POST/GET
-    cleanupExpiredDocuments();
+    try {
+      await pusher.trigger(channelName, eventName, eventData);
+      console.log(`Pusher event triggered successfully for channel ${channelName}, event ${eventName}, data: ${JSON.stringify(eventData)}`);
+    } catch (pusherError) {
+      // Log the error but still return success to n8n unless critical
+      const pusherErrorMessage = pusherError instanceof Error ? pusherError.message : 'Unknown Pusher error';
+      console.error(`Failed to trigger Pusher event for user ${userID}:`, pusherErrorMessage, pusherError);
+      // Optional: Return an error response if Pusher notification is critical
+      // return NextResponse.json({ success: false, error: "Failed to notify client" }, { status: 500 });
+    }
+    // --- End Pusher Event Trigger ---
 
+    // Respond success to n8n
     return NextResponse.json({
       success: true,
-      message: `Document ${documentID} ready for retrieval by user ${userID}.`
+      message: `Notification triggered for document ${documentID} for user ${userID}.`
     });
 
   } catch (error) {
@@ -86,43 +101,5 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/**
- * Handles GET requests to retrieve a pending document for a specific user.
- * Expects a `userID` query parameter.
- */
-export async function GET(req: NextRequest) {
-  const userID = req.nextUrl.searchParams.get("userID");
-
-  if (!userID) {
-    console.warn("Webhook GET request missing userID parameter.");
-    return NextResponse.json(
-      { error: "Missing userID query parameter" },
-      { status: 400 }
-    );
-  }
-
-  console.log(`Webhook GET request received for user ${userID}.`);
-
-  // Run cleanup before retrieving
-  cleanupExpiredDocuments();
-
-  const pendingDoc = pendingDocuments.get(userID);
-
-  if (!pendingDoc) {
-    console.log(`No pending document found for user ${userID}.`);
-    // It's okay if no document is pending, return null
-    return NextResponse.json({ pendingDocument: null });
-  }
-
-  // Document found, remove it after retrieval (one-time fetch)
-  console.log(`Found pending document ${pendingDoc.documentID} for user ${userID}. Removing from store.`);
-  pendingDocuments.delete(userID);
-
-  // Return the document details
-  return NextResponse.json({
-    pendingDocument: {
-      documentID: pendingDoc.documentID,
-      text: pendingDoc.text, // Include text if it exists
-    }
-  });
-}
+// The GET handler is removed as polling is deprecated.
+// export async function GET(req: NextRequest) { ... } // REMOVED
