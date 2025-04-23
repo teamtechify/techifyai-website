@@ -16,6 +16,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing documentId" }, { status: 400 });
   }
 
+  // Check if this request should force download attachment
+  const downloadMode = req.nextUrl.searchParams.get("download") === "true";
+
   try {
     console.log(`Fetching PandaDoc document: ${documentId}`);
     const downloadRes = await fetch(`https://api.pandadoc.com/public/v1/documents/${documentId}/download`, {
@@ -37,11 +40,28 @@ export async function GET(req: NextRequest) {
     const blob = await downloadRes.blob();
     const buffer = Buffer.from(await blob.arrayBuffer());
 
-    // Return PDF with appropriate headers for inline display
+    // Get filename from Content-Disposition header if available
+    let filename = `document-${documentId}.pdf`;
+    const contentDisposition = downloadRes.headers.get('Content-Disposition');
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1].replace(/['"]/g, '');
+      }
+    }
+
+    // Set the appropriate Content-Disposition based on request mode
+    const disposition = downloadMode ? 'attachment' : 'inline';
+
+    // Return PDF with appropriate headers
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'inline', // Suggests browser displays inline if possible
+        'Content-Disposition': `${disposition}; filename="${filename}"`,
+        // Add cache control headers to prevent caching issues
+        'Cache-Control': 'no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
   } catch (error) {

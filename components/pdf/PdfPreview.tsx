@@ -84,7 +84,7 @@ export const PdfPreview: React.FC<PdfPreviewProps> = ({ documentId, onClick, cla
       <FileText className="h-5 w-5 text-blue-400 flex-shrink-0" aria-hidden="true" /> {/* Hide decorative icon */}
 
       {/* Simple label - no filename per client requirement */}
-      <span className="text-sm font-medium truncate">PDF Document</span>
+      <span className="text-sm font-medium truncate">View Document</span>
 
       {/* Screen reader only text for additional context */}
       <span className="sr-only"> (Opens PDF viewer)</span>
