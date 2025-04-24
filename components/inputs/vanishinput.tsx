@@ -67,25 +67,25 @@ interface ConversationEntry {
 }
 
 /**
- * Parses message for <DOCUMENTID> tag.
+ * Parses message for <DRIVEURL> tag.
  * @param {string} message - The message to parse.
- * @returns {{ text: string; documentId: string | null }} Cleaned text and document ID.
+ * @returns {{ text: string; driveUrl: string | null }} Cleaned text and Google Drive URL.
  */
-const parseMessageForDocument = (message: string): { text: string; documentId: string | null } => {
+const parseMessageForDocument = (message: string): { text: string; driveUrl: string | null } => {
   if (!message || typeof message !== 'string') {
-    return { text: message || '', documentId: null };
+    return { text: message || '', driveUrl: null };
   }
-  const docIdRegex = /<DOCUMENTID>(.*?)<\/DOCUMENTID>/i;
-  const match = message.match(docIdRegex);
+  const driveUrlRegex = /<DRIVEURL>(.*?)<\/DRIVEURL>/i;
+  const match = message.match(driveUrlRegex);
   if (match && match[1]) {
-    const extractedId = match[1].trim();
-    console.log(`Found document ID in message: ${extractedId}`);
+    const extractedUrl = match[1].trim();
+    console.log(`Found Google Drive URL in message: ${extractedUrl}`);
     return {
-      text: message.replace(docIdRegex, '').trim(),
-      documentId: extractedId,
+      text: message.replace(driveUrlRegex, '').trim(),
+      driveUrl: extractedUrl,
     };
   }
-  return { text: message, documentId: null };
+  return { text: message, driveUrl: null };
 };
 
 
@@ -241,16 +241,16 @@ export const VanishInput: React.FC<VanishInputProps> = ({
       const channel = pusherClient.subscribe(channelName);
 
       // --- Bind Event Handlers ---
-      channel.bind('document-ready', (data: { documentID: string }) => {
+      channel.bind('document-ready', (data: { driveUrl: string }) => {
         console.log(`Pusher: Received document-ready event for user ${userId}:`, data);
-        if (data.documentID) {
+        if (data.driveUrl) {
           // Update conversation state
           setConversation(prev => [
             ...prev,
             // 1. Fixed message
             { from: 'ai', message: 'Here is your PDF for review:' },
             // 2. Message with only the document tag for PdfPreview rendering
-            { from: 'ai', message: `<DOCUMENTID>${data.documentID}</DOCUMENTID>` }
+            { from: 'ai', message: `<DRIVEURL>${data.driveUrl}</DRIVEURL>` }
           ]);
           // Ensure scroll happens after state update
           scrollToBottom();
@@ -319,7 +319,7 @@ export const VanishInput: React.FC<VanishInputProps> = ({
         {conversation.map((entry, idx) => {
           const parsedMessage = entry.from === 'ai' && entry.message
             ? parseMessageForDocument(entry.message)
-            : { text: entry.message || '', documentId: null };
+            : { text: entry.message || '', driveUrl: null };
 
           return (
             <div key={`msg-${idx}-${entry.from}-${uuidv4()}`} className={`flex ${entry.from === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -328,7 +328,7 @@ export const VanishInput: React.FC<VanishInputProps> = ({
                 entry.from === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white'
               )}>
                 {/* Render text only if it's not just the placeholder document tag */}
-                {parsedMessage.text && parsedMessage.text !== `<DOCUMENTID>${parsedMessage.documentId}</DOCUMENTID>` && <p>{parsedMessage.text}</p>}
+                {parsedMessage.text && parsedMessage.text !== `<DRIVEURL>${parsedMessage.driveUrl}</DRIVEURL>` && <p>{parsedMessage.text}</p>}
 
                 {entry.image && (
                   <div className="mt-2">
@@ -336,11 +336,11 @@ export const VanishInput: React.FC<VanishInputProps> = ({
                   </div>
                 )}
 
-                {/* Always render PdfPreview if documentId exists */}
-                {parsedMessage.documentId && (
+                {/* Always render PdfPreview if driveUrl exists */}
+                {parsedMessage.driveUrl && (
                   <PdfPreview
-                    documentId={parsedMessage.documentId}
-                    className={parsedMessage.text && parsedMessage.text !== `<DOCUMENTID>${parsedMessage.documentId}</DOCUMENTID>` ? 'mt-2' : ''}
+                    driveUrl={parsedMessage.driveUrl}
+                    className={parsedMessage.text && parsedMessage.text !== `<DRIVEURL>${parsedMessage.driveUrl}</DRIVEURL>` ? 'mt-2' : ''}
                   />
                 )}
               </div>
