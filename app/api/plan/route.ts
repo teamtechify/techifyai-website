@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     // --- Trigger Pusher Event ---
     const channelName = `user-${userID}`; // User-specific channel
     const eventName = 'document-ready';
-    const eventData = { driveUrl: documentURL }; // Send URL in the format frontend expects
+    const eventData = { documentURL: documentURL }; // Send URL in the format frontend expects
 
     console.log(`Attempting to trigger Pusher event for channel: ${channelName}, event: ${eventName}`);
 
