@@ -6,15 +6,12 @@ import { Download, ExternalLink } from "lucide-react";
 import { useState } from "react";
 
 interface PdfPreviewProps {
-  documentId: string;
+  driveUrl: string;
   className?: string;
 }
 
-export const PdfPreview: React.FC<PdfPreviewProps> = ({ documentId, className }) => {
+export const PdfPreview: React.FC<PdfPreviewProps> = ({ driveUrl, className }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const viewPdfUrl = `/api/pandadoc?documentId=${documentId}`;
-  const downloadPdfUrl = `/api/pandadoc?documentId=${documentId}&download=true`;
 
   return (
     <>
@@ -31,16 +28,15 @@ export const PdfPreview: React.FC<PdfPreviewProps> = ({ documentId, className })
             "transition-all duration-150",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           )}
-          aria-label={`View PDF document ${documentId}`}
+          aria-label="View PDF document"
         >
           <ExternalLink className="h-4 w-4" aria-hidden="true" />
           <span className="text-sm font-medium">View</span>
         </button>
 
         {/* Download PDF Button */}
-        <a
-          href={downloadPdfUrl}
-          download
+        <button
+          onClick={() => window.open(driveUrl, '_blank')}
           className={cn(
             "inline-flex items-center gap-2 px-3 py-1.5 rounded-md",
             "bg-gray-700/90 text-white",
@@ -50,17 +46,17 @@ export const PdfPreview: React.FC<PdfPreviewProps> = ({ documentId, className })
             "transition-all duration-150",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           )}
-          aria-label={`Download PDF document ${documentId}`}
+          aria-label="Open in Google Drive"
         >
           <Download className="h-4 w-4" aria-hidden="true" />
-          <span className="text-sm font-medium">Download</span>
-        </a>
+          <span className="text-sm font-medium">Open in Drive</span>
+        </button>
       </div>
 
       <PdfViewerModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        pdfUrl={viewPdfUrl}
+        pdfUrl={driveUrl}
       />
     </>
   );
