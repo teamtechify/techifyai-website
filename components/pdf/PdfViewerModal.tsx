@@ -15,7 +15,7 @@ export function PdfViewerModal({ isOpen, onClose, pdfUrl }: PdfViewerModalProps)
         <div className="relative z-[9999]">
             <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
                 <DialogPortal>
-                    <DialogOverlay className="z-[998]" />
+                    <DialogOverlay className="fixed inset-0 z-[998] bg-black/60 backdrop-blur-md transition-all duration-200" />
                     <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 bg-black/30 backdrop-blur-md border-0 z-[999]">
                         {/* Header with controls */}
                         <div className="absolute top-0 right-0 left-0 flex justify-end items-center p-4 z-10">
