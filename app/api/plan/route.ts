@@ -54,14 +54,13 @@ export async function POST(req: NextRequest) {
 
     // Extract data safely
     const userID = body?.userID || body?.data?.userID;
-    const documentID = body?.documentID || body?.data?.documentID;
-    // const text = body?.text || body?.data?.text; // Text from webhook, though frontend ignores it now
+    const documentURL = body?.documentURL || body?.data?.documentURL;
 
     // Validate required fields
-    if (!userID || !documentID) {
-      console.error("Webhook error: Missing required fields 'userID' or 'documentID'. Body:", body);
+    if (!userID || !documentURL) {
+      console.error("Webhook error: Missing required fields 'userID' or 'documentURL'. Body:", body);
       return NextResponse.json(
-        { success: false, error: "Missing required fields: userID and documentID" },
+        { success: false, error: "Missing required fields: userID and documentURL" },
         { status: 400 }
       );
     }
@@ -69,7 +68,7 @@ export async function POST(req: NextRequest) {
     // --- Trigger Pusher Event ---
     const channelName = `user-${userID}`; // User-specific channel
     const eventName = 'document-ready';
-    const eventData = { documentID: documentID }; // Only send the ID
+    const eventData = { driveUrl: documentURL }; // Send URL in the format frontend expects
 
     console.log(`Attempting to trigger Pusher event for channel: ${channelName}, event: ${eventName}`);
 
@@ -88,7 +87,7 @@ export async function POST(req: NextRequest) {
     // Respond success to n8n
     return NextResponse.json({
       success: true,
-      message: `Notification triggered for document ${documentID} for user ${userID}.`
+      message: `Notification triggered with document URL for user ${userID}.`
     });
 
   } catch (error) {
