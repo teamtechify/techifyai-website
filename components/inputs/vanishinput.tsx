@@ -64,29 +64,8 @@ interface ConversationEntry {
   from: 'user' | 'ai';
   message?: string;
   image?: string;
+  pdfUrl?: string;
 }
-
-/**
- * Parses message for <DRIVEURL> tag.
- * @param {string} message - The message to parse.
- * @returns {{ text: string; driveUrl: string | null }} Cleaned text and Google Drive URL.
- */
-const parseMessageForDocument = (message: string): { text: string; driveUrl: string | null } => {
-  if (!message || typeof message !== 'string') {
-    return { text: message || '', driveUrl: null };
-  }
-  const driveUrlRegex = /<DRIVEURL>(.*?)<\/DRIVEURL>/i;
-  const match = message.match(driveUrlRegex);
-  if (match && match[1]) {
-    const extractedUrl = match[1].trim();
-    console.log(`Found Google Drive URL in message: ${extractedUrl}`);
-    return {
-      text: message.replace(driveUrlRegex, '').trim(),
-      driveUrl: extractedUrl,
-    };
-  }
-  return { text: message, driveUrl: null };
-};
 
 
 /**
@@ -241,21 +220,19 @@ export const VanishInput: React.FC<VanishInputProps> = ({
       const channel = pusherClient.subscribe(channelName);
 
       // --- Bind Event Handlers ---
-      channel.bind('document-ready', (data: { driveUrl: string }) => {
+      channel.bind('document-ready', (data: { documentURL: string }) => {
         console.log(`Pusher: Received document-ready event for user ${userId}:`, data);
-        if (data.driveUrl) {
-          // Update conversation state
+        if (data.documentURL) {
+          // Update conversation state with the direct PDF URL
           setConversation(prev => [
             ...prev,
             // 1. Fixed message
-            { from: 'ai', message: 'Here is your PDF for review:' },
-            // 2. Message with only the document tag for PdfPreview rendering
-            { from: 'ai', message: `<DRIVEURL>${data.driveUrl}</DRIVEURL>` }
+            { from: 'ai', message: 'Here is your PDF for review:', pdfUrl: data.documentURL }
           ]);
           // Ensure scroll happens after state update
           scrollToBottom();
         } else {
-          console.warn("Pusher: Received document-ready event without documentID:", data);
+          console.warn("Pusher: Received document-ready event without documentURL:", data);
         }
       });
 
@@ -317,18 +294,13 @@ export const VanishInput: React.FC<VanishInputProps> = ({
         aria-live="polite"
       >
         {conversation.map((entry, idx) => {
-          const parsedMessage = entry.from === 'ai' && entry.message
-            ? parseMessageForDocument(entry.message)
-            : { text: entry.message || '', driveUrl: null };
-
           return (
             <div key={`msg-${idx}-${entry.from}-${uuidv4()}`} className={`flex ${entry.from === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={cn(
                 `inline-block p-2 px-3 rounded-lg max-w-[85%] lg:max-w-[75%] break-words shadow-sm`,
                 entry.from === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white'
               )}>
-                {/* Render text only if it's not just the placeholder document tag */}
-                {parsedMessage.text && parsedMessage.text !== `<DRIVEURL>${parsedMessage.driveUrl}</DRIVEURL>` && <p>{parsedMessage.text}</p>}
+                {entry.message && <p>{entry.message}</p>}
 
                 {entry.image && (
                   <div className="mt-2">
@@ -336,11 +308,10 @@ export const VanishInput: React.FC<VanishInputProps> = ({
                   </div>
                 )}
 
-                {/* Always render PdfPreview if driveUrl exists */}
-                {parsedMessage.driveUrl && (
+                {entry.pdfUrl && (
                   <PdfPreview
-                    driveUrl={parsedMessage.driveUrl}
-                    className={parsedMessage.text && parsedMessage.text !== `<DRIVEURL>${parsedMessage.driveUrl}</DRIVEURL>` ? 'mt-2' : ''}
+                    pdfUrl={entry.pdfUrl}
+                    className={entry.message ? 'mt-2' : ''}
                   />
                 )}
               </div>

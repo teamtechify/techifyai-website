@@ -10,35 +10,14 @@ interface PdfViewerModalProps {
     pdfUrl: string;
 }
 
-function extractGoogleDriveFileId(url: string): string | null {
-    // Handle various Google Drive URL formats
-    const patterns = [
-        /\/file\/d\/([^/]+)/, // Standard sharing URL
-        /\?id=([^&]+)/, // Open format
-        /\/d\/([^/]+)/, // Direct link
-    ];
-
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match && match[1]) {
-            return match[1];
-        }
-    }
-    return null;
-}
-
 export function PdfViewerModal({ isOpen, onClose, pdfUrl }: PdfViewerModalProps) {
-    const fileId = extractGoogleDriveFileId(pdfUrl);
-    const previewUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : pdfUrl;
-    const downloadUrl = fileId ? `https://drive.google.com/uc?export=download&id=${fileId}` : pdfUrl;
-
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 bg-transparent border-0">
+            <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 bg-black/30 backdrop-blur-md border-0">
                 {/* Header with controls */}
                 <div className="absolute top-0 right-0 left-0 flex justify-between items-center p-4 z-10">
                     <a
-                        href={downloadUrl}
+                        href={pdfUrl}
                         download
                         className={cn(
                             "inline-flex items-center gap-2 px-3 py-1.5 rounded-md",
@@ -59,9 +38,9 @@ export function PdfViewerModal({ isOpen, onClose, pdfUrl }: PdfViewerModalProps)
                 </div>
 
                 {/* PDF Viewer */}
-                <div className="w-full h-full bg-white/95 backdrop-blur-xl rounded-lg shadow-2xl overflow-hidden">
+                <div className="w-full h-full bg-white/95 backdrop-blur-xl rounded-lg shadow-2xl overflow-hidden mt-14">
                     <iframe
-                        src={previewUrl}
+                        src={pdfUrl}
                         className="w-full h-full border-0"
                         title="PDF Viewer"
                         allow="autoplay"
