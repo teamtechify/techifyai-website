@@ -4,7 +4,14 @@ import { Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal } from 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
+// Assuming a LoadingSpinner component exists, adjust path if necessary
+// import { LoadingSpinner } from "@/components/ui/spinner"; 
+import { useEffect, useState } from "react";
+
+// Placeholder for LoadingSpinner if not available
+const LoadingSpinner = () => (
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+);
 
 interface PdfViewerModalProps {
     isOpen: boolean;
@@ -14,100 +21,161 @@ interface PdfViewerModalProps {
 
 export function PdfViewerModal({ isOpen, onClose, pdfUrl }: PdfViewerModalProps) {
     const isMobile = useIsMobile();
-    const overlayRef = useRef<HTMLDivElement>(null);
+    const [pdfLoaded, setPdfLoaded] = useState(false);
+    const [pdfLoadError, setPdfLoadError] = useState(false);
 
-    // Handle click on empty space within PDF container
-    const handleOverlayClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        const target = e.target as HTMLElement;
-        // Check if click is on the overlay and not on the PDF content
-        if (target === overlayRef.current) {
-            onClose();
-        }
-    }, [onClose]);
-
-    // Handle ESC key (backup to Radix UI's built-in handling)
+    // Reset states when modal opens or URL changes
     useEffect(() => {
-        const handleEscKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isOpen) {
-                onClose();
-            }
-        };
+        if (isOpen) {
+            setPdfLoaded(false);
+            setPdfLoadError(false);
+        }
+    }, [isOpen, pdfUrl]);
 
-        window.addEventListener('keydown', handleEscKey);
-        return () => window.removeEventListener('keydown', handleEscKey);
-    }, [isOpen, onClose]);
+    // Mobile-specific optimizations
+    useEffect(() => {
+        if (isOpen) {
+            // Prevent background scrolling when modal is open
+            const originalBodyOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+
+            let originalDocStylePosition = '';
+            let originalDocStyleWidth = '';
+            let originalDocStyleHeight = '';
+
+            // For iOS devices - fix for full height issues
+            if (isMobile) {
+                originalDocStylePosition = document.documentElement.style.position;
+                originalDocStyleWidth = document.documentElement.style.width;
+                originalDocStyleHeight = document.documentElement.style.height;
+                document.documentElement.style.position = 'fixed';
+                document.documentElement.style.width = '100%';
+                document.documentElement.style.height = '100%';
+            }
+
+            return () => {
+                document.body.style.overflow = originalBodyOverflow;
+                if (isMobile) {
+                    document.documentElement.style.position = originalDocStylePosition;
+                    document.documentElement.style.width = originalDocStyleWidth;
+                    document.documentElement.style.height = originalDocStyleHeight;
+                }
+            };
+        }
+    }, [isOpen, isMobile]);
+
+    const handleLoad = () => {
+        setPdfLoaded(true);
+        setPdfLoadError(false);
+    };
+
+    // Basic error handling - iframe onError is not standard/reliable
+    // A timeout approach might be more robust if needed.
+    const handleError = () => {
+        console.error("Error loading PDF iframe.");
+        setPdfLoadError(true);
+        setPdfLoaded(false); // Ensure loading spinner hides
+    };
+
+    const handleRetry = () => {
+        setPdfLoadError(false);
+        setPdfLoaded(false);
+        // Optional: Force iframe reload by changing src slightly
+        // e.g., setPdfUrlInternal(pdfUrl + `?retry=${Date.now()}`);
+    };
 
     return (
-        <div className="relative z-[9999]">
-            <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-                <DialogPortal>
-                    <DialogOverlay
-                        className={cn(
-                            "fixed inset-0 z-[998] bg-black/60 backdrop-blur-md",
-                            "transition-all duration-200"
-                        )}
-                    />
-                    <DialogContent
-                        className={cn(
-                            "relative max-w-[95vw] w-full md:max-w-5xl",
-                            "h-[95vh] md:h-[90vh]",
-                            "p-0 border-0 z-[999]",
-                            "bg-transparent"
-                        )}
-                    >
-                        {/* PDF Container with Overlay */}
-                        <div
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogPortal>
+                <DialogOverlay
+                    className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[998]"
+                />
+                <DialogContent
+                    className={cn(
+                        // Base styles
+                        "fixed inset-0 p-0 border-0 bg-transparent overflow-hidden z-[999]", // Added z-index
+                        // Mobile-first approach
+                        "flex flex-col justify-center items-center",
+                        // Override for larger screens
+                        "md:inset-auto md:w-[95vw] md:h-[90vh] md:max-w-5xl md:rounded-lg"
+                    )}
+                    // Prevent Dialog default focus trapping which can interfere with iframe
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                >
+                    {/* PDF Viewer Container */}
+                    <div className={cn(
+                        "relative w-full h-full max-h-[100vh] md:max-h-[90vh] bg-white/95", // Adjusted bg opacity
+                        "flex flex-col rounded-none md:rounded-lg shadow-2xl overflow-hidden"
+                    )}>
+                        {/* Close Button */}
+                        <DialogClose
                             className={cn(
-                                "relative w-full h-full",
-                                "bg-white/95 backdrop-blur-xl",
-                                "rounded-lg shadow-2xl overflow-hidden"
+                                "absolute top-3 right-3 z-[1001]", // Ensure button is above iframe content
+                                "p-2 rounded-full",
+                                "bg-gray-800/60 hover:bg-gray-700/80 text-white",
+                                "shadow-lg hover:shadow-xl",
+                                "transition-all duration-150",
+                                "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent focus:ring-white"
                             )}
                         >
-                            {/* Close Button */}
-                            <DialogClose
-                                className={cn(
-                                    "absolute top-4 right-4 z-[1000]",
-                                    "p-3 md:p-2 rounded-full",
-                                    "bg-white/90 hover:bg-white",
-                                    "shadow-lg hover:shadow-xl",
-                                    "transition-all duration-150",
-                                    "focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                )}
-                            >
-                                <X className={cn(
-                                    "h-5 w-5 md:h-4 md:w-4",
-                                    "text-gray-800"
-                                )} />
-                                <span className="sr-only">Close</span>
-                            </DialogClose>
+                            <X className="h-5 w-5" />
+                            <span className="sr-only">Close</span>
+                        </DialogClose>
 
-                            {/* Clickable Overlay */}
-                            <div
-                                ref={overlayRef}
-                                onClick={handleOverlayClick}
-                                className={cn(
-                                    "absolute inset-0 z-[999]",
-                                    "bg-transparent"
-                                )}
-                            />
-
-                            {/* PDF Viewer */}
-                            <iframe
-                                src={pdfUrl}
-                                className={cn(
-                                    "w-full h-full border-0",
-                                    "relative z-[998]"
-                                )}
-                                title="PDF Viewer"
-                                allow="autoplay"
-                                style={{
-                                    objectFit: 'contain'
-                                }}
-                            />
+                        {/* PDF wrapper with controlled dimensions */}
+                        <div className="w-full h-full flex-grow overflow-hidden relative"> {/* Added relative positioning */}
+                            {pdfLoadError ? (
+                                <div className="flex flex-col items-center justify-center p-6 h-full text-center bg-gray-100">
+                                    <p className="text-gray-700 mb-4">
+                                        There was an issue displaying the PDF.
+                                    </p>
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <a
+                                            href={pdfUrl}
+                                            download
+                                            target="_blank" // Good practice for downloads
+                                            rel="noopener noreferrer" // Security for target="_blank"
+                                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                        >
+                                            Download PDF
+                                        </a>
+                                        <button
+                                            onClick={handleRetry}
+                                            className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition-colors"
+                                        >
+                                            Try Again
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Loading Indicator */}
+                                    {!pdfLoaded && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-[1000]">
+                                            <LoadingSpinner />
+                                        </div>
+                                    )}
+                                    {/* PDF Iframe */}
+                                    <iframe
+                                        // Use a key to force re-render if url changes significantly
+                                        key={pdfUrl}
+                                        src={pdfUrl}
+                                        className={cn(
+                                            "w-full h-full border-0 transition-opacity duration-300",
+                                            pdfLoaded ? "opacity-100" : "opacity-0" // Fade in on load
+                                        )}
+                                        title="PDF Viewer"
+                                        onLoad={handleLoad}
+                                        onError={handleError} // Basic error handling
+                                        sandbox="allow-same-origin allow-scripts allow-forms" // Security sandbox
+                                        loading="eager" // Prioritize loading as it's modal content
+                                    />
+                                </>
+                            )}
                         </div>
-                    </DialogContent>
-                </DialogPortal>
-            </Dialog>
-        </div>
+                    </div>
+                </DialogContent>
+            </DialogPortal>
+        </Dialog>
     );
 }
