@@ -8,31 +8,38 @@ import './chat.css';
 export const ChatSection = ({ active, setActive, services, setServices }: { active: boolean, setActive: (active: boolean) => void, services: Array<string>, setServices: (services: Array<string>) => void }) => {
   const sectionRef = useRef<HTMLDivElement>(null);
 
-  // Scroll into view when activated
+  // Enhanced scroll behavior
   useEffect(() => {
     if (active && sectionRef.current) {
-      sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      // Prevent body scroll when chat is active (full screen)
-      document.body.style.overflow = 'hidden';
-    } else {
-      // Restore body scroll when chat is inactive
+      // No longer need to prevent body scroll
       document.body.style.overflow = '';
+
+      // Scroll to this section with offset
+      const yOffset = -50; // Adjust based on testing
+      const element = sectionRef.current;
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+
+      window.scrollTo({
+        top: y,
+        behavior: 'smooth'
+      });
     }
-    // Cleanup function to restore scroll on component unmount or state change
+
     return () => {
       document.body.style.overflow = '';
     };
   }, [active]);
 
+
   return (
     <section
       ref={sectionRef}
+      id="nova-chat-section" // Add ID for precise scrolling
       className={`w-full bg-black border-t-[2px] border-white/20 relative transition-all duration-500 ease-in-out parent ${active
-          ? 'fixed inset-0 z-40 overflow-y-auto' // Full screen when active
-          : 'min-h-[240px]' // Normal height when inactive
+        ? 'min-h-[90vh] z-30 overflow-y-auto' // Tall height instead of fixed positioning
+        : 'min-h-[240px]' // Normal height when inactive
         }`}
-      // Add scroll-margin-top if you have a fixed header
-      style={{ scrollMarginTop: active ? '0px' : '80px' /* Adjust if needed */ }}
+    // Remove scroll-margin-top as we'll handle scrolling differently
     >
       <div className={`blue-glow pointer-events-none ${active ? 'opacity-50' : ''}`} />
       <div className={`max-w-7xl relative mx-auto ${active ? 'h-full flex flex-col' : ''}`}>

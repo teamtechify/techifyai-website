@@ -342,7 +342,7 @@ export const VanishInput: React.FC<VanishInputProps> = ({
     // Adjust main container for active state: flex column, full height
     <div className={cn(
       `relative parent`,
-      active ? 'flex flex-col h-full pt-16 pb-24' : 'py-8' // Adjusted padding for active state
+      active ? 'flex flex-col min-h-[80vh] pt-16 pb-24' : 'py-8' // Significant height when active
     )}>
       {/* Conversation Area - takes remaining space in active state */}
       <div
@@ -408,7 +408,7 @@ export const VanishInput: React.FC<VanishInputProps> = ({
         className={cn(
           "w-full px-4",
           active
-            ? "fixed bottom-0 left-0 right-0 bg-black border-t border-white/20 py-4 z-50" // Fixed position styles
+            ? "sticky bottom-0 bg-black border-t border-white/20 py-4 z-10" // Sticky instead of fixed
             : "relative mt-8" // Original inactive styles
         )}
       >

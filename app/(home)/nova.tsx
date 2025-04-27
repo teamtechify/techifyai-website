@@ -13,36 +13,26 @@ export const NovaSections = () => {
   // console.log(selectedServices)
 
   return (
-    <>
-      {/* Original position placeholder */}
-      {!isActive && (
-        <div className="relative bg-black w-full transition-all duration-700 ease-in-out">
-          <FadeInComponent>
-            <BannerSection selectedServices={selectedServices} setSelectedServices={setSelectedServices} />
-            <ChatSection active={isActive} setActive={setIsActive} services={selectedServices} setServices={setSelectedServices} />
-          </FadeInComponent>
-        </div>
-      )}
+    <div className={`bg-black w-full transition-all duration-700 ease-in-out ${isActive ? 'pb-[50vh]' : ''}`}>
+      <FadeInComponent>
+        {/* Conditionally render BannerSection only when NOT active */}
+        {!isActive && (
+          <BannerSection selectedServices={selectedServices} setSelectedServices={setSelectedServices} />
+        )}
 
-      {/* Fixed-position animated container */}
-      <div
-        className={`fixed inset-0 bg-black z-[100] transition-transform duration-700 ease-in-out overflow-y-scroll ${isActive ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
-          }`}
-      >
+        {/* Always render ChatSection */}
+        <ChatSection active={isActive} setActive={setIsActive} services={selectedServices} setServices={setSelectedServices} />
+
+        {/* Close button when active */}
         {isActive && (
           <div
-            className="absolute top-4 right-4 hover:scale-105 hover:text-blue-300 text-2xl text-white flex items-center gap-2 cursor-pointer transition-transform duration-300"
+            className="fixed top-4 right-4 hover:scale-105 hover:text-blue-300 text-2xl text-white flex items-center gap-2 cursor-pointer transition-transform duration-300 z-50"
             onClick={() => setIsActive(false)}
           >
             <FaX />
           </div>
         )}
-
-        <FadeInComponent>
-          <BannerSection selectedServices={selectedServices} setSelectedServices={setSelectedServices} />
-          <ChatSection active={isActive} setActive={setIsActive} services={selectedServices} setServices={setSelectedServices} />
-        </FadeInComponent>
-      </div>
-    </>
+      </FadeInComponent>
+    </div>
   )
 }
