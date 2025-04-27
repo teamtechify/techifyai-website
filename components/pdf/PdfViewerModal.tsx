@@ -33,36 +33,17 @@ export function PdfViewerModal({ isOpen, onClose, pdfUrl }: PdfViewerModalProps)
     }, [isOpen, pdfUrl]);
 
     // Mobile-specific optimizations
+    // Handle modal open/close effects
     useEffect(() => {
-        if (isOpen) {
-            // Prevent background scrolling when modal is open
-            const originalBodyOverflow = document.body.style.overflow;
-            document.body.style.overflow = 'hidden';
+        if (!isOpen) return;
 
-            let originalDocStylePosition = '';
-            let originalDocStyleWidth = '';
-            let originalDocStyleHeight = '';
+        // Prevent background scrolling
+        document.body.style.overflow = 'hidden';
 
-            // For iOS devices - fix for full height issues
-            if (isMobile) {
-                originalDocStylePosition = document.documentElement.style.position;
-                originalDocStyleWidth = document.documentElement.style.width;
-                originalDocStyleHeight = document.documentElement.style.height;
-                document.documentElement.style.position = 'fixed';
-                document.documentElement.style.width = '100%';
-                document.documentElement.style.height = '100%';
-            }
-
-            return () => {
-                document.body.style.overflow = originalBodyOverflow;
-                if (isMobile) {
-                    document.documentElement.style.position = originalDocStylePosition;
-                    document.documentElement.style.width = originalDocStyleWidth;
-                    document.documentElement.style.height = originalDocStyleHeight;
-                }
-            };
-        }
-    }, [isOpen, isMobile]);
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isOpen]);
 
     const handleLoad = () => {
         setPdfLoaded(true);
@@ -87,43 +68,27 @@ export function PdfViewerModal({ isOpen, onClose, pdfUrl }: PdfViewerModalProps)
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogPortal>
-                <DialogOverlay
-                    className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[998]"
-                />
+                <DialogOverlay className="fixed inset-0 bg-black/80 backdrop-blur-md transition-all duration-200" />
                 <DialogContent
                     className={cn(
-                        // Base styles
-                        "fixed inset-0 p-0 border-0 bg-transparent overflow-hidden z-[999]", // Added z-index
-                        // Mobile-first approach
-                        "flex flex-col justify-center items-center",
-                        // Override for larger screens
-                        "md:inset-auto md:w-[95vw] md:h-[90vh] md:max-w-5xl md:rounded-lg"
+                        "fixed left-1/2 top-1/2 z-50 grid w-full max-w-6xl -translate-x-1/2 -translate-y-1/2",
+                        "h-[95vh] md:h-[90vh] p-0",
+                        "bg-background/95 backdrop-blur-sm rounded-lg shadow-2xl border border-white/10",
+                        "overflow-hidden transition-all duration-200"
                     )}
-                    // Prevent Dialog default focus trapping which can interfere with iframe
-                    onOpenAutoFocus={(e) => e.preventDefault()}
                 >
                     {/* PDF Viewer Container */}
-                    <div className={cn(
-                        "relative w-full h-full max-h-[100vh] md:max-h-[90vh] bg-white/95", // Adjusted bg opacity
-                        "flex flex-col rounded-none md:rounded-lg shadow-2xl overflow-hidden"
-                    )}>
-                        {/* Close Button */}
-                        <DialogClose
-                            className={cn(
-                                "absolute top-3 right-3 z-[1001]", // Ensure button is above iframe content
-                                "p-2 rounded-full",
-                                "bg-gray-800/60 hover:bg-gray-700/80 text-white",
-                                "shadow-lg hover:shadow-xl",
-                                "transition-all duration-150",
-                                "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent focus:ring-white"
-                            )}
-                        >
-                            <X className="h-5 w-5" />
-                            <span className="sr-only">Close</span>
-                        </DialogClose>
+                    <div className="relative w-full h-full flex flex-col">
+                        {/* Header with close button - Increased z-index */}
+                        <div className="absolute top-0 right-0 left-0 flex justify-end p-4 z-30">
+                            <DialogClose className="p-2 rounded-full bg-white/90 hover:bg-white hover:shadow-md transition-all duration-150">
+                                <X className="h-4 w-4 text-gray-800" />
+                                <span className="sr-only">Close</span>
+                            </DialogClose>
+                        </div>
 
-                        {/* PDF wrapper with controlled dimensions */}
-                        <div className="w-full h-full flex-grow overflow-hidden relative"> {/* Added relative positioning */}
+                        {/* PDF wrapper */}
+                        <div className="w-full h-full flex-grow overflow-hidden mt-14">
                             {pdfLoadError ? (
                                 <div className="flex flex-col items-center justify-center p-6 h-full text-center bg-gray-100">
                                     <p className="text-gray-700 mb-4">
@@ -149,20 +114,21 @@ export function PdfViewerModal({ isOpen, onClose, pdfUrl }: PdfViewerModalProps)
                                 </div>
                             ) : (
                                 <>
-                                    {/* Loading Indicator */}
+                                    {/* Loading Indicator - Added explicit z-index */}
                                     {!pdfLoaded && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-[1000]">
+                                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-20">
                                             <LoadingSpinner />
                                         </div>
                                     )}
-                                    {/* PDF Iframe */}
+                                    {/* PDF Iframe - Added explicit z-index */}
                                     <iframe
                                         // Use a key to force re-render if url changes significantly
                                         key={pdfUrl}
                                         src={pdfUrl}
                                         className={cn(
-                                            "w-full h-full border-0 transition-opacity duration-300",
-                                            pdfLoaded ? "opacity-100" : "opacity-0" // Fade in on load
+                                            "w-full h-full border-0 z-10", // Added z-10
+                                            "transition-opacity duration-300",
+                                            pdfLoaded ? "opacity-100" : "opacity-0"
                                         )}
                                         title="PDF Viewer"
                                         onLoad={handleLoad}
