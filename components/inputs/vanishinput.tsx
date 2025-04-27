@@ -18,7 +18,7 @@ import Pusher from 'pusher-js'; // Import Pusher client library
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { IoReturnDownForwardSharp } from "react-icons/io5";
 import { v4 as uuidv4 } from 'uuid';
-import './index.css';
+import './index.css'; // Keep for scrollbar styles, remove bubble styles later if needed
 
 /**
  * @hook useSessionUserId
@@ -92,6 +92,7 @@ export const VanishInput: React.FC<VanishInputProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const conversationEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const inputContainerRef = useRef<HTMLDivElement>(null); // Ref for input area container
   const pusherClientRef = useRef<Pusher | null>(null); // Ref to hold the Pusher client instance
 
   const arrayToCommaString = (items: string[]): string => items.join(", ");
@@ -338,28 +339,51 @@ export const VanishInput: React.FC<VanishInputProps> = ({
   if (!userId) return null; // Render nothing until userId is available
 
   return (
-    <div className={cn(`relative py-8 parent`, active ? 'chat-active' : '')}>
-      {/* Conversation Area */}
+    // Adjust main container for active state: flex column, full height
+    <div className={cn(
+      `relative parent`,
+      active ? 'flex flex-col h-full pt-16 pb-24' : 'py-8' // Adjusted padding for active state
+    )}>
+      {/* Conversation Area - takes remaining space in active state */}
       <div
         ref={scrollContainerRef}
         className={cn(
-          "mt-6 space-y-3 px-4 custom-scroll overflow-y-auto",
-          active ? "max-h-[60vh] lg:max-h-[65vh]" : "max-h-[200px] lg:max-h-[250px]",
-          "transition-[max-height] duration-500 ease-in-out"
+          "px-4 custom-scroll overflow-y-auto",
+          active
+            ? "flex-grow space-y-4" // Takes remaining height, increased spacing
+            : "mt-6 space-y-3 max-h-[200px] lg:max-h-[250px]", // Original inactive state
+          "transition-all duration-500 ease-in-out" // Keep transition
         )}
         aria-live="polite"
       >
         {conversation.map((entry, idx) => {
+          const messageKey = `msg-${idx}-${entry.from}-${entry.pdfUrl ? entry.pdfUrl.split('?')[0] : idx}`;
+          const isUser = entry.from === 'user';
+          const messageStyles = cn(
+            "w-full max-w-3xl px-6 py-4 rounded break-words", // Base styles: full width container, padding, rounded corners
+            isUser
+              ? 'ml-auto bg-blue-600 text-white' // User: Right aligned, blue background
+              : 'mr-auto bg-gray-800 text-white border-l-4 border-blue-500' // AI: Left aligned, dark gray, blue left border
+          );
+
           return (
-            <div key={`msg-${idx}-${entry.from}-${entry.pdfUrl ? entry.pdfUrl.split('?')[0] : idx}`} className={`flex ${entry.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={cn(
-                `inline-block p-2 px-3 rounded-lg max-w-[85%] lg:max-w-[75%] break-words shadow-sm`,
-                entry.from === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white'
-              )}>
-                {entry.message && <p>{entry.message}</p>}
+            // Outer container for alignment
+            <div key={messageKey} className={`flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
+              {/* Inner message container with new styles */}
+              <div className={messageStyles}>
+                {/* Optional: Add NOVA icon/name for AI messages */}
+                {!isUser && (
+                  <div className="flex items-center gap-2 mb-2 text-sm text-gray-400">
+                    {/* Placeholder for NOVA icon */}
+                    {/* <span className="text-lg">🤖</span> */}
+                    <span>Nova</span>
+                  </div>
+                )}
+
+                {entry.message && <p className="whitespace-pre-wrap">{entry.message}</p>}
 
                 {entry.image && (
-                  <div className="mt-2">
+                  <div className="mt-3"> {/* Increased margin */}
                     <Image src={entry.image} alt="AI visual response" width={300} height={200} className="rounded-md" />
                   </div>
                 )}
@@ -367,7 +391,8 @@ export const VanishInput: React.FC<VanishInputProps> = ({
                 {entry.pdfUrl && (
                   <PdfPreview
                     pdfUrl={entry.pdfUrl}
-                    className={entry.message ? 'mt-2' : ''}
+                    // Add a specific class if needed for styling within the new layout
+                    className={cn(entry.message ? 'mt-3' : '', 'pdf-preview-container')}
                   />
                 )}
               </div>
@@ -377,49 +402,52 @@ export const VanishInput: React.FC<VanishInputProps> = ({
         <div ref={conversationEndRef} style={{ height: '1px' }} />
       </div>
 
-      {/* Input Area */}
-      <div className="flex justify-center w-full relative mt-8 px-4">
-        <input
-          ref={inputRef}
-          onFocus={FocusInput}
-          onBlur={BlurInput}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          value={inputData.data}
-          required={required}
-          type={type}
-          placeholder={loading ? "Nova is thinking..." : (conversation.length === 0 ? placeholder : "Type your message...")}
-          className={cn(
-            `placeholder-white/60 text-center w-full max-w-[600px] text-[16px] lg:text-[18px]`,
-            `py-3 px-4 text-white outline-none bg-transparent`,
-            `border-b-2 transition-all duration-300 ease-in-out`,
-            isFocused ? 'border-white' : 'border-white/30',
-            active && conversation.length > 0 && 'bg-white/5 rounded-t-lg border-b-0 text-left pl-4',
-            loading && 'opacity-70 cursor-not-allowed'
-          )}
-          disabled={loading}
-          aria-label="Chat input"
-        />
-      </div>
-
-      {/* Send Button Area */}
+      {/* Input Area - Fixed at bottom when active */}
       <div
+        ref={inputContainerRef}
         className={cn(
-          "flex justify-center items-center gap-4 py-4 lg:py-8 cursor-pointer duration-300 transition-all",
-          loading ? "opacity-50 cursor-not-allowed" : "hover:scale-105 hover:opacity-90"
+          "w-full px-4",
+          active
+            ? "fixed bottom-0 left-0 right-0 bg-black border-t border-white/20 py-4 z-50" // Fixed position styles
+            : "relative mt-8" // Original inactive styles
         )}
-        onClick={!loading ? sendMessage : undefined}
-        role="button"
-        aria-disabled={loading}
-        tabIndex={loading ? -1 : 0}
-        onKeyDown={(e) => { if (e.key === 'Enter' && !loading) sendMessage(); }}
       >
-        <div className="bg-text-secondary/30 leading-normal text-[18px] w-[32px] h-[32px] relative rounded-md flex items-center justify-center">
-          <IoReturnDownForwardSharp className="text-white" />
+        <div className="max-w-3xl mx-auto flex items-center gap-3"> {/* Centered container */}
+          <input
+            ref={inputRef}
+            onFocus={FocusInput}
+            onBlur={BlurInput}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            value={inputData.data}
+            required={required}
+            type={type}
+            placeholder={loading ? "Nova is thinking..." : (conversation.length === 0 ? placeholder : "Type your message...")}
+            className={cn(
+              `placeholder-white/60 flex-grow text-[16px] lg:text-[18px]`, // Input takes available space
+              `py-3 px-4 text-white outline-none bg-white/5 rounded-lg`, // Consistent background, rounded
+              `border border-white/30 focus:border-white focus:ring-1 focus:ring-blue-500`, // Border and focus styles
+              loading && 'opacity-70 cursor-not-allowed'
+            )}
+            disabled={loading}
+            aria-label="Chat input"
+          />
+          {/* Send Button */}
+          <button
+            onClick={!loading ? sendMessage : undefined}
+            disabled={loading}
+            className={cn(
+              "p-3 rounded-lg bg-blue-600 text-white transition-all duration-150",
+              loading ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-500 active:opacity-90",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            )}
+            aria-label="Send message"
+          >
+            <IoReturnDownForwardSharp className="w-5 h-5" />
+          </button>
         </div>
-        <p className="text-[14px] lg:text-[18px] text-white uppercase mt-1">to send</p>
       </div>
-
+      {/* Removed original Send Button Area */}
     </div>
   );
 };
