@@ -137,8 +137,18 @@ export const VanishInput: React.FC<VanishInputProps> = ({
 
       const steps = response.data.steps;
       console.log(`Received response from Voiceflow for user ${userId}:`, steps);
+
+      // Process responses and deduplicate PDFs
       const parsedAiResponses = steps.map((step: { type: string; payload?: { message?: string; image?: string } }): ConversationEntry | null => {
         if ((step.type === "speak" || step.type === "text") && step.payload?.message) {
+          // Extract PDF URL if present in message
+          const docUrlMatch = step.payload.message.match(/<DOCUMENTID>(.*?)<\/DOCUMENTID>/);
+          if (docUrlMatch && docUrlMatch[1]) {
+            const pdfUrl = docUrlMatch[1];
+            // Add timestamp to URL for uniqueness
+            const urlWithId = `${pdfUrl}${pdfUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
+            return { from: "ai", message: 'Here is your PDF for review:', pdfUrl: urlWithId };
+          }
           return { from: "ai", message: step.payload.message };
         } else if (step.type === "visual" && step.payload?.image) {
           return { from: "ai", image: step.payload.image };
@@ -146,10 +156,28 @@ export const VanishInput: React.FC<VanishInputProps> = ({
         return null;
       }).filter((entry: ConversationEntry | null): entry is ConversationEntry => entry !== null);
 
-      setConversation(prev => [
-        ...prev.filter(msg => msg.message !== '...Nova is writing a response'),
-        ...parsedAiResponses
-      ]);
+      // Update conversation with deduplication
+      setConversation(prev => {
+        const newEntries = parsedAiResponses.filter((newEntry: ConversationEntry) => {
+          // If this entry has a PDF URL, check for duplicates
+          if (newEntry.pdfUrl) {
+            const baseURL = newEntry.pdfUrl.split('?')[0];
+            const urlExists = prev.some(existingEntry =>
+              existingEntry.pdfUrl && existingEntry.pdfUrl.split('?')[0] === baseURL
+            );
+            if (urlExists) {
+              console.log(`Prevented duplicate PDF from Voiceflow response: ${baseURL}`);
+              return false;
+            }
+          }
+          return true;
+        });
+
+        return [
+          ...prev.filter(msg => msg.message !== '...Nova is writing a response'),
+          ...newEntries
+        ];
+      });
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -207,6 +235,9 @@ export const VanishInput: React.FC<VanishInputProps> = ({
       return;
     }
 
+    // Track processed document URLs using a ref to persist across rerenders
+    const processedDocumentURLs = new Set<string>();
+
     console.log("Pusher: Initializing connection...");
     try {
       const pusherClient = new Pusher(pusherKey, {
@@ -223,14 +254,39 @@ export const VanishInput: React.FC<VanishInputProps> = ({
       channel.bind('document-ready', (data: { documentURL: string }) => {
         console.log(`Pusher: Received document-ready event for user ${userId}:`, data);
         if (data.documentURL) {
-          // Update conversation state with the direct PDF URL
-          setConversation(prev => [
-            ...prev,
-            // 1. Fixed message
-            { from: 'ai', message: 'Here is your PDF for review:', pdfUrl: data.documentURL }
-          ]);
-          // Ensure scroll happens after state update
-          scrollToBottom();
+          // Get base URL without query parameters
+          const baseURL = data.documentURL.split('?')[0];
+
+          // Check if we've already processed this document
+          if (!processedDocumentURLs.has(baseURL)) {
+            processedDocumentURLs.add(baseURL);
+
+            // Add a timestamp to URL to ensure uniqueness if needed
+            const urlWithId = `${data.documentURL}${data.documentURL.includes('?') ? '&' : '?'}t=${Date.now()}`;
+
+            // Update conversation state with deduplication check
+            setConversation(prev => {
+              // Check if we already have this document in the conversation
+              const urlExists = prev.some(entry =>
+                entry.pdfUrl && entry.pdfUrl.split('?')[0] === baseURL
+              );
+
+              if (urlExists) {
+                console.log(`Prevented duplicate PDF: ${baseURL}`);
+                return prev; // Don't add duplicate
+              }
+
+              return [
+                ...prev,
+                { from: 'ai', message: 'Here is your PDF for review:', pdfUrl: urlWithId }
+              ];
+            });
+
+            // Ensure scroll happens after state update
+            scrollToBottom();
+          } else {
+            console.log(`Skipped duplicate document-ready event for URL: ${baseURL}`);
+          }
         } else {
           console.warn("Pusher: Received document-ready event without documentURL:", data);
         }
@@ -295,7 +351,7 @@ export const VanishInput: React.FC<VanishInputProps> = ({
       >
         {conversation.map((entry, idx) => {
           return (
-            <div key={`msg-${idx}-${entry.from}-${uuidv4()}`} className={`flex ${entry.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div key={`msg-${idx}-${entry.from}-${entry.pdfUrl ? entry.pdfUrl.split('?')[0] : idx}`} className={`flex ${entry.from === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={cn(
                 `inline-block p-2 px-3 rounded-lg max-w-[85%] lg:max-w-[75%] break-words shadow-sm`,
                 entry.from === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white'
