@@ -179,6 +179,15 @@ export const VanishInput: React.FC<VanishInputProps> = ({
           ...newEntries
         ];
       });
+      
+      // Save the transcript after each interaction
+      try {
+        console.log(`Saving transcript for user ${userId}`);
+        await axios.put("/api/transcripts", { sessionID: userId });
+      } catch (saveError) {
+        console.error(`Error saving transcript for user ${userId}:`, saveError);
+        // Don't interrupt the main flow for transcript saving errors
+      }
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
