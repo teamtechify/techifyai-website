@@ -3,30 +3,29 @@ import Image from "next/image";
 import { useEffect, useRef } from "react";
 import './chat.css';
 
+interface ChatSectionProps {
+  active: boolean;
+  setActive: (active: boolean) => void;
+  services: Array<string>;
+  setServices: (services: Array<string>) => void;
+  className?: string; // Add className as an optional prop
+}
 
-
-export const ChatSection = ({ active, setActive, services, setServices }: { active: boolean, setActive: (active: boolean) => void, services: Array<string>, setServices: (services: Array<string>) => void }) => {
+export const ChatSection = ({ active, setActive, services, setServices, className }: ChatSectionProps) => {
   const sectionRef = useRef<HTMLDivElement>(null);
 
-  // Enhanced scroll behavior
+  // REINSTATE: Prevent body scroll when chat UI is active (modal-like behavior)
   useEffect(() => {
-    if (active && sectionRef.current) {
-      // No longer need to prevent body scroll
+    if (active) {
+      document.body.style.overflow = 'hidden';
+      document.body.classList.add('chat-active');
+    } else {
       document.body.style.overflow = '';
-
-      // Scroll to this section with offset
-      const yOffset = -50; // Adjust based on testing
-      const element = sectionRef.current;
-      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-
-      window.scrollTo({
-        top: y,
-        behavior: 'smooth'
-      });
+      document.body.classList.remove('chat-active');
     }
-
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = ''; // Cleanup on unmount
+      document.body.classList.remove('chat-active');
     };
   }, [active]);
 
@@ -34,15 +33,16 @@ export const ChatSection = ({ active, setActive, services, setServices }: { acti
   return (
     <section
       ref={sectionRef}
-      id="nova-chat-section" // Add ID for precise scrolling
-      className={`w-full bg-black border-t-[2px] border-white/20 relative transition-all duration-500 ease-in-out parent ${active
-        ? 'min-h-[90vh] z-30 overflow-y-auto' // Tall height instead of fixed positioning
+      id="nova-chat-section" 
+      className={`w-full relative transition-all duration-500 ease-in-out parent ${active
+        // When active: flex column, z-index. Takes natural height within NovaSections scroll.
+        ? 'flex flex-col z-30' 
         : 'min-h-[240px]' // Normal height when inactive
-        }`}
-    // Remove scroll-margin-top as we'll handle scrolling differently
+        } ${className || ''}`}
     >
       <div className={`blue-glow pointer-events-none ${active ? 'opacity-50' : ''}`} />
-      <div className={`max-w-7xl relative mx-auto ${active ? 'h-full flex flex-col' : ''}`}>
+      {/* This container takes natural height based on VanishInput, or h-full if inactive for placeholder */}
+      <div className={`relative ${active ? 'flex flex-col flex-1 min-h-0' : 'h-full flex flex-col'}`}> 
         {/* Nova Glow - adjust position/opacity for active state if needed */}
         <div className={`absolute left-1/2 -translate-x-1/2 pointer-events-none ${active ? 'top-0' : ''}`}>
           <Image
@@ -52,7 +52,6 @@ export const ChatSection = ({ active, setActive, services, setServices }: { acti
             alt="glow"
             className={`brightness-50 ${active ? 'opacity-10' : 'opacity-20'}`} />
         </div>
-        {/* VanishInput takes full height in active state */}
         <VanishInput
           placeholder="Hi I'm Nova...How can I help you?"
           type="text"

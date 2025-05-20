@@ -6,7 +6,7 @@
     width: 50%;
     height: 25%;
     background: radial-gradient(ellipse at bottom, rgba(0, 200, 255, .7), transparent 70%);
-    filter: blur(100px);
+    filter: blur(60px);
     animation: waveGlow 3s ease-in-out infinite alternate, pulseGlow 6s ease-in-out infinite alternate;
     pointer-events: none;
     transition: opacity 0.5s ease, transform 0.5s ease;
@@ -27,10 +27,10 @@
   
   @keyframes pulseGlow {
     0% {
-      opacity: 0.6;
+      opacity: 0.8;
     }
     100% {
-      opacity: 9;
+      opacity: 1.0;
     }
   }
   

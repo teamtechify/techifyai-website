@@ -57,6 +57,7 @@ interface VanishInputProps {
   setActive: (active: boolean) => void;
   services: Array<string>;
   setServices: (services: Array<string>) => void;
+  initialConversation?: ConversationEntry[];
 }
 
 /** Structure for conversation entries */
@@ -73,27 +74,19 @@ interface ConversationEntry {
  *
  * Main chat interface: handles input, conversation, Voiceflow API, PDF integration, and Pusher notifications.
  */
-export const VanishInput: React.FC<VanishInputProps> = ({
-  placeholder,
-  inputValue = "",
-  required = true,
-  type = "text",
-  active,
-  setActive,
-  services,
-  setServices
-}) => {
-  const userId = useSessionUserId();
-  const [inputData, setInputData] = useState({ data: inputValue });
-  const [isFocused, setIsFocused] = useState(false);
-  const [conversation, setConversation] = useState<ConversationEntry[]>([]);
+export const VanishInput = ({ services, setServices, active, setActive, initialConversation, placeholder, required }: VanishInputProps) => {
+  const sessionUserId = useSessionUserId();
+  const [inputData, setInputData] = useState<{ data: string; files: File[] }>({ data: "", files: [] });
+  const [conversation, setConversation] = useState<ConversationEntry[]>(initialConversation || []);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const conversationEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const inputContainerRef = useRef<HTMLDivElement>(null); // Ref for input area container
-  const pusherClientRef = useRef<Pusher | null>(null); // Ref to hold the Pusher client instance
+  const inputContainerRef = useRef<HTMLDivElement>(null);
+  const pusherClientRef = useRef<Pusher | null>(null);
+  const [inputFocused, setInputFocused] = useState(false);
+  const [currentPlaceholder, setCurrentPlaceholder] = useState(placeholder || "Hi I'm Nova...How can I help you?");
 
   const arrayToCommaString = (items: string[]): string => items.join(", ");
 
@@ -109,35 +102,60 @@ export const VanishInput: React.FC<VanishInputProps> = ({
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputData({ data: e.target.value });
+    setInputData({ data: e.target.value, files: inputData.files });
   };
 
-  const sendMessage = useCallback(async () => {
-    if (!inputData.data.trim() || !userId || loading) return;
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const currentMessage = inputData.data;
+      const currentFiles = inputData.files;
+      if (currentMessage.trim() || currentFiles.length > 0) {
+        setInputData({ data: "", files: [] }); // Clear input immediately
+        await sendMessage(currentMessage, currentFiles, services);
+      }
+    }
+  };
 
-    const userMessage = inputData.data;
-    console.log(`Sending message from user ${userId}: ${userMessage}`);
-    setConversation(prev => [...prev, { from: 'user', message: userMessage }]);
-    setInputData({ data: "" });
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const currentMessage = inputData.data;
+    const currentFiles = inputData.files;
+    if (currentMessage.trim() || currentFiles.length > 0) {
+      setInputData({ data: "", files: [] }); // Clear input immediately
+      await sendMessage(currentMessage, currentFiles, services);
+    }
+  };
+
+  const sendMessage = useCallback(async (message: string, files: File[], currentServices: string[]) => {
+    if (!message.trim() && files.length === 0 || !sessionUserId || loading) return;
+
+    console.log(`Sending message from user ${sessionUserId}: ${message}`);
+    const newConversationEntry: ConversationEntry = { from: 'user', message };
+    if (files.length > 0) {
+      // For simplicity, just log file names. Actual upload/handling would be more complex.
+      newConversationEntry.message += ` (Files: ${files.map(f => f.name).join(', ')})`;
+    }
+    setConversation(prev => [...prev, newConversationEntry]);
     setLoading(true);
     setConversation(prev => [...prev, { from: 'ai', message: '...Nova is writing a response' }]);
     scrollToBottom();
 
     try {
       if (!initialized) {
-        console.log(`Sending launch event for user ${userId}`);
-        await axios.post("/api/voiceflow", { userId, actionType: "launch" });
+        console.log(`Sending launch event for user ${sessionUserId}`);
+        await axios.post("/api/voiceflow", { userId: sessionUserId, actionType: "launch" });
         setInitialized(true); // Set initialized *after* successful launch
       }
 
-      const servicesString = services.length > 0 ? `::[SERVICES BEGIN]::${arrayToCommaString(services)}` : '';
-      const payload = `${userMessage}${servicesString}`;
-      console.log(`Sending text event for user ${userId} with payload: ${payload}`);
-      const response = await axios.post("/api/voiceflow", { userId, actionType: "text", payload });
+      const servicesString = currentServices.length > 0 ? `::[SERVICES BEGIN]::${arrayToCommaString(currentServices)}` : '';
+      const payload = `${message}${servicesString}`;
+      console.log(`Sending text event for user ${sessionUserId} with payload: ${payload}`);
+      const response = await axios.post("/api/voiceflow", { userId: sessionUserId, actionType: "text", payload });
       setServices([]);
 
       const steps = response.data.steps;
-      console.log(`Received response from Voiceflow for user ${userId}:`, steps);
+      console.log(`Received response from Voiceflow for user ${sessionUserId}:`, steps);
 
       // Process responses and deduplicate PDFs
       const parsedAiResponses = steps.map((step: { type: string; payload?: { message?: string; image?: string } }): ConversationEntry | null => {
@@ -182,16 +200,16 @@ export const VanishInput: React.FC<VanishInputProps> = ({
       
       // Save the transcript after each interaction
       try {
-        console.log(`Saving transcript for user ${userId}`);
-        await axios.put("/api/transcripts", { sessionID: userId });
+        console.log(`Saving transcript for user ${sessionUserId}`);
+        await axios.put("/api/transcripts", { sessionID: sessionUserId });
       } catch (saveError) {
-        console.error(`Error saving transcript for user ${userId}:`, saveError);
+        console.error(`Error saving transcript for user ${sessionUserId}:`, saveError);
         // Don't interrupt the main flow for transcript saving errors
       }
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      console.error(`Error sending message to Voiceflow for user ${userId}:`, errorMessage);
+      console.error(`Error sending message to Voiceflow for user ${sessionUserId}:`, errorMessage);
       setConversation(prev => [
         ...prev.filter(msg => msg.message !== '...Nova is writing a response'),
         { from: 'ai', message: 'Sorry, I encountered an error. Please try again.' }
@@ -200,33 +218,26 @@ export const VanishInput: React.FC<VanishInputProps> = ({
       setLoading(false);
       scrollToBottom();
     }
-  }, [inputData.data, userId, loading, initialized, services, setServices, scrollToBottom]);
-
-  const handleKeyDown = useCallback(async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      await sendMessage();
-    }
-  }, [sendMessage]);
+  }, [sessionUserId, loading, initialized, services, setServices, scrollToBottom]);
 
   useEffect(() => {
     scrollToBottom();
   }, [conversation, scrollToBottom]);
 
   const FocusInput = useCallback(() => {
-    setIsFocused(true);
+    setInputFocused(true);
     setActive(true);
   }, [setActive]);
 
   const BlurInput = useCallback(() => {
-    setIsFocused(false);
+    setInputFocused(false);
   }, []);
 
   // --- Pusher Connection Effect ---
   useEffect(() => {
-    // Only proceed if userId is available
-    if (!userId) {
-      console.log("Pusher: Waiting for userId...");
+    // Only proceed if sessionUserId is available
+    if (!sessionUserId) {
+      console.log("Pusher: Waiting for sessionUserId...");
       return;
     }
 
@@ -256,13 +267,13 @@ export const VanishInput: React.FC<VanishInputProps> = ({
       });
       pusherClientRef.current = pusherClient; // Store the instance
 
-      const channelName = `user-${userId}`;
+      const channelName = `user-${sessionUserId}`;
       console.log(`Pusher: Subscribing to channel: ${channelName}`);
       const channel = pusherClient.subscribe(channelName);
 
       // --- Bind Event Handlers ---
       channel.bind('document-ready', (data: { documentURL: string }) => {
-        console.log(`Pusher: Received document-ready event for user ${userId}:`, data);
+        console.log(`Pusher: Received document-ready event for user ${sessionUserId}:`, data);
         if (data.documentURL) {
           // Get base URL without query parameters
           const baseURL = data.documentURL.split('?')[0];
@@ -337,126 +348,108 @@ export const VanishInput: React.FC<VanishInputProps> = ({
       console.error("Pusher: Failed to initialize client:", error);
     }
 
-  }, [userId, setConversation, scrollToBottom]); // Dependencies: userId, setConversation, scrollToBottom
+  }, [sessionUserId, setConversation, scrollToBottom]); // Dependencies: sessionUserId, setConversation, scrollToBottom
 
 
   // --- Polling Logic Removed ---
-  // const checkForPendingDocuments = useCallback(async () => { ... }, [userId, scrollToBottom]); // REMOVED
-  // useEffect(() => { ... setInterval(checkForPendingDocuments, 5000); ... }, [userId, initialized, checkForPendingDocuments]); // REMOVED
+  // const checkForPendingDocuments = useCallback(async () => { ... }, [sessionUserId, scrollToBottom]); // REMOVED
+  // useEffect(() => { ... setInterval(checkForPendingDocuments, 5000); ... }, [sessionUserId, initialized, checkForPendingDocuments]); // REMOVED
 
 
-  if (!userId) return null; // Render nothing until userId is available
+  if (active && !sessionUserId) {
+    console.warn("VanishInput: Chat is active but sessionUserId is not yet available. Rendering empty temporarily.");
+    return null;
+  }
 
   return (
-    // Adjust main container for active state: flex column, full height
-    <div className={cn(
-      `relative parent`,
-      active ? 'flex flex-col min-h-[80vh] pt-16 pb-24' : 'py-8' // Significant height when active
-    )}>
-      {/* Conversation Area - takes remaining space in active state */}
+    <div className={`w-full flex flex-col h-full`}> {/* Ensure h-full to take space from parent */}
+      {/* Message display area - takes up most of the space and is scrollable */}
       <div
         ref={scrollContainerRef}
-        className={cn(
-          "px-4 custom-scroll overflow-y-auto",
-          active
-            ? "flex-grow space-y-4" // Takes remaining height, increased spacing
-            : "mt-6 space-y-3 max-h-[200px] lg:max-h-[250px]", // Original inactive state
-          "transition-all duration-500 ease-in-out" // Keep transition
-        )}
-        aria-live="polite"
+        className={`flex-grow overflow-y-auto space-y-4 ${active ? 'p-4' : 'p-0'}`}
+        onClick={() => !active && setActive(true)} // Allow clicking messages area to activate if not active
       >
-        {conversation.map((entry, idx) => {
-          const messageKey = `msg-${idx}-${entry.from}-${entry.pdfUrl ? entry.pdfUrl.split('?')[0] : idx}`;
-          const isUser = entry.from === 'user';
-          const messageStyles = cn(
-            "w-full max-w-3xl px-6 py-4 rounded break-words", // Base styles: full width container, padding, rounded corners
-            isUser
-              ? 'ml-auto bg-blue-600 text-white' // User: Right aligned, blue background
-              : 'mr-auto bg-gray-800 text-white border-l-4 border-blue-500' // AI: Left aligned, dark gray, blue left border
-          );
-
-          return (
-            // Outer container for alignment
-            <div key={messageKey} className={`flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
-              {/* Inner message container with new styles */}
-              <div className={messageStyles}>
-                {/* Optional: Add NOVA icon/name for AI messages */}
-                {!isUser && (
-                  <div className="flex items-center gap-2 mb-2 text-sm text-gray-400">
-                    {/* Placeholder for NOVA icon */}
-                    {/* <span className="text-lg">🤖</span> */}
-                    <span>Nova</span>
-                  </div>
-                )}
-
-                {entry.message && <p className="whitespace-pre-wrap">{entry.message}</p>}
-
-                {entry.image && (
-                  <div className="mt-3"> {/* Increased margin */}
-                    <Image src={entry.image} alt="AI visual response" width={300} height={200} className="rounded-md" />
-                  </div>
-                )}
-
-                {entry.pdfUrl && (
-                  <PdfPreview
-                    pdfUrl={entry.pdfUrl}
-                    // Add a specific class if needed for styling within the new layout
-                    className={cn(entry.message ? 'mt-3' : '', 'pdf-preview-container')}
-                  />
-                )}
-              </div>
+        {/* Render messages or placeholder */}
+        {active && conversation.length > 0 && conversation.map((item, index) => (
+          <div key={`msg-${index}-${item.from}-${item.pdfUrl ? item.pdfUrl.split('?')[0] : index}`} className={`flex w-full mb-4 ${item.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={cn(
+              "max-w-3xl px-4 py-2 rounded break-words",
+              item.from === 'user'
+                ? 'bg-neutral-700 text-white rounded-2xl'
+                : 'text-white'
+            )}>
+              {!item.from && (
+                <div className="flex items-center gap-2 mb-2 text-sm text-gray-400">
+                  <span>Nova</span>
+                </div>
+              )}
+              {item.message && <p className="whitespace-pre-wrap">{item.message}</p>}
+              {item.image && (
+                <div className="mt-3">
+                  <Image src={item.image} alt="AI visual response" width={300} height={200} className="rounded-md" />
+                </div>
+              )}
+              {item.pdfUrl && (
+                <PdfPreview
+                  pdfUrl={item.pdfUrl}
+                  className={cn(item.message ? 'mt-3' : '', 'pdf-preview-container')}
+                />
+              )}
             </div>
-          );
-        })}
-        <div ref={conversationEndRef} style={{ height: '1px' }} />
+          </div>
+        ))}
+        {!active && (
+          <div className="flex items-center justify-center h-full text-neutral-500 px-4 py-10 cursor-pointer" onClick={() => setActive(true)}>
+            {placeholder}
+          </div>
+        )}
+        {active && conversation.length === 0 && (
+          <div className="flex items-center justify-center h-full text-neutral-400 px-4">
+            Enter your message below...
+          </div>
+        )}
       </div>
 
-      {/* Input Area - Fixed at bottom when active */}
-      <div
-        ref={inputContainerRef}
-        className={cn(
-          "w-full px-4",
-          active
-            ? "sticky bottom-0 bg-black border-t border-white/20 py-4 z-10" // Sticky instead of fixed
-            : "relative mt-8" // Original inactive styles
-        )}
-      >
-        <div className="max-w-3xl mx-auto flex items-center gap-3"> {/* Centered container */}
-          <input
-            ref={inputRef}
-            onFocus={FocusInput}
-            onBlur={BlurInput}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            value={inputData.data}
-            required={required}
-            type={type}
-            placeholder={loading ? "Nova is thinking..." : (conversation.length === 0 ? placeholder : "Type your message...")}
-            className={cn(
-              `placeholder-white/60 flex-grow text-[16px] lg:text-[18px]`, // Input takes available space
-              `py-3 px-4 text-white outline-none bg-white/5 rounded-lg`, // Consistent background, rounded
-              `border border-white/30 focus:border-white focus:ring-1 focus:ring-blue-500`, // Border and focus styles
-              loading && 'opacity-70 cursor-not-allowed'
-            )}
-            disabled={loading}
-            aria-label="Chat input"
-          />
-          {/* Send Button */}
-          <button
-            onClick={!loading ? sendMessage : undefined}
-            disabled={loading}
-            className={cn(
-              "p-3 rounded-lg bg-blue-600 text-white transition-all duration-150",
-              loading ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-500 active:opacity-90",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            )}
-            aria-label="Send message"
-          >
-            <IoReturnDownForwardSharp className="w-5 h-5" />
-          </button>
+      {/* Input area - now part of the scroll flow, not sticky */}
+      {active && (
+        <div
+          ref={inputContainerRef}
+          className="bg-transparent transition-all duration-300 ease-in-out p-4"
+        >
+          {/* Centering and max-width wrapper for the form */}
+          <div className="max-w-xl mx-auto">
+            <form onSubmit={handleSubmit} className="flex flex-col items-center gap-2">
+              <input
+                ref={inputRef}
+                onFocus={FocusInput}
+                onBlur={BlurInput}
+                onChange={handleChange}
+                onKeyDown={handleKeyDown}
+                value={inputData.data}
+                required={required}
+                placeholder={active ? "" : currentPlaceholder}
+                className="w-full p-3 bg-neutral-700 text-white rounded-md focus:outline-none focus:ring-transparent placeholder-neutral-500 text-sm"
+              />
+              {/* Centered Send button and text */}
+              <div className="flex flex-row items-center justify-center gap-2 mt-2">
+                <button
+                  type="submit"
+                  disabled={loading || (!inputData.data.trim() && inputData.files.length === 0)}
+                  className={cn(
+                    "p-1.5 rounded-lg bg-neutral-700 text-white transition-all duration-150", // Adjusted padding and bg
+                    loading ? "opacity-50 cursor-not-allowed" : "hover:bg-neutral-600 active:opacity-90",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  )}
+                  aria-label="Send message"
+                >
+                  <IoReturnDownForwardSharp className="w-5 h-5" />
+                </button>
+                <span className="text-white text-sm">TO SEND</span>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
-      {/* Removed original Send Button Area */}
+      )}
     </div>
   );
 };

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react"
 import { FaChevronLeft, FaChevronRight, FaClock, FaInfo } from "react-icons/fa6"
 import './banner.css'
 import { SERVICES } from "./banner_data"
+import { cn } from "@/lib/utils"
 
 export interface ServiceCardType {
     title: string,
@@ -22,8 +23,8 @@ export interface ServiceType {
     cards: Array<ServiceCardType>
 }
 
-export const BannerSection = ({ selectedServices, setSelectedServices }:
-    { selectedServices: Array<string>, setSelectedServices: Function }) => {
+export const BannerSection = ({ isActive, selectedServices, setSelectedServices }:
+    { isActive?: boolean, selectedServices: Array<string>, setSelectedServices: Function }) => {
     //service scroll functionality
     const [emblaRef, emblaApi] = useEmblaCarousel({
         loop: false,
@@ -88,7 +89,10 @@ export const BannerSection = ({ selectedServices, setSelectedServices }:
 
     return (
         <FadeInComponent>
-            <section className="lg:px-4 relative mt-12 lg:mt-16 mb-8">
+            <section className={cn(
+                "lg:px-4 relative",
+                isActive ? "mt-2 mb-4" : "mt-12 lg:mt-16 mb-8"
+            )}>
                 <div className="max-w-7xl mx-auto px-4">
                     <h2 className="text-white uppercase font-bold text-2xl">
                         Our Services

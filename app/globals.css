@@ -250,3 +250,8 @@ body {
     @apply border-border outline-ring/50;}
   body {
     @apply bg-background text-foreground;}}
+
+/* Hide NavComponent when chat is active */
+body.chat-active nav.fixed.z-50 {
+  display: none !important;
+}
