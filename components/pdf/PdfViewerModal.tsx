@@ -133,7 +133,6 @@ export function PdfViewerModal({ isOpen, onClose, pdfUrl }: PdfViewerModalProps)
                                         title="PDF Viewer"
                                         onLoad={handleLoad}
                                         onError={handleError} // Basic error handling
-                                        sandbox="allow-same-origin allow-scripts allow-forms" // Security sandbox
                                         loading="eager" // Prioritize loading as it's modal content
                                     />
                                 </>

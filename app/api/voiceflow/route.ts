@@ -114,6 +114,7 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json();
+    console.log("Raw Voiceflow Response:", JSON.stringify(data, null, 2));
     console.log(`Voiceflow response received for user ${userId}. Processing steps...`);
 
     // Process the response steps to standardize document references
