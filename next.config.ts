@@ -4,6 +4,14 @@ const nextConfig: NextConfig = {
   images: {
     domains: ["dd.dexscreener.com", 'coin-images.coingecko.com'],
   },
+  experimental: {
+    turbo: {
+      resolveAlias: {
+        canvas: './empty-module.ts',
+        'pdfjs-dist/build/pdf.worker.min.mjs': './node_modules/pdfjs-dist/build/pdf.worker.min.mjs',
+      },
+    },
+  },
   // async headers() {
   //   return [
   //     {

@@ -2,15 +2,33 @@
 
 import { PdfViewerModal } from "@/components/pdf/PdfViewerModal";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 interface PdfPreviewProps {
   pdfUrl: string;
   className?: string;
 }
 
+// Helper function to extract business name and create title
+const getDocumentTitleFromUrl = (url: string): string => {
+  try {
+    const decodedUrl = decodeURIComponent(url);
+    const filename = decodedUrl.substring(decodedUrl.lastIndexOf('/') + 1);
+    // Assuming format "Business Name - ID.pdf"
+    const namePart = filename.split(' - ')[0];
+    if (namePart) {
+      return `${namePart} Blueprint`;
+    }
+  } catch (e) {
+    console.error("Error parsing PDF URL for title:", e);
+  }
+  return 'Document Blueprint'; // Fallback title
+};
+
 export const PdfPreview: React.FC<PdfPreviewProps> = ({ pdfUrl, className }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const documentTitle = useMemo(() => getDocumentTitleFromUrl(pdfUrl), [pdfUrl]);
 
   return (
     <>
@@ -28,7 +46,7 @@ export const PdfPreview: React.FC<PdfPreviewProps> = ({ pdfUrl, className }) => 
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             "font-medium"
           )}
-          aria-label="View PDF document"
+          aria-label={`View ${documentTitle}`}
         >
           <span>View My Plan</span>
         </button>
@@ -38,6 +56,7 @@ export const PdfPreview: React.FC<PdfPreviewProps> = ({ pdfUrl, className }) => 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         pdfUrl={pdfUrl}
+        documentTitle={documentTitle}
       />
     </>
   );

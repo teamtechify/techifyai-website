@@ -85,6 +85,7 @@ export const VanishInput = ({ services, setServices, active, setActive, initialC
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
   const pusherClientRef = useRef<Pusher | null>(null);
+  const processedDocumentURLsRef = useRef(new Set<string>());
   const [inputFocused, setInputFocused] = useState(false);
   const [currentPlaceholder, setCurrentPlaceholder] = useState(placeholder || "Hi I'm Nova...How can I help you?");
 
@@ -133,11 +134,28 @@ export const VanishInput = ({ services, setServices, active, setActive, initialC
     console.log(`Sending message from user ${sessionUserId}: ${message}`);
     const newConversationEntry: ConversationEntry = { from: 'user', message };
     if (files.length > 0) {
-      // For simplicity, just log file names. Actual upload/handling would be more complex.
       newConversationEntry.message += ` (Files: ${files.map(f => f.name).join(', ')})`;
     }
     setConversation(prev => [...prev, newConversationEntry]);
     setLoading(true);
+    
+    // --- BEGIN TEST PDF MODIFICATION ---
+    if (message.trim().toLowerCase() === "testpdf") {
+      console.log("TESTPDF keyword detected. Displaying test PDF.");
+      setConversation(prev => [
+        ...prev,
+        { 
+          from: 'ai', 
+          message: 'Displaying test PDF:', 
+          pdfUrl: 'https://storage.googleapis.com/nova-plans/mahis%20burgers%20-%20Cque7SNCPvmrD4dMZehU9V.pdf' 
+        }
+      ]);
+      setLoading(false);
+      scrollToBottom();
+      return; // Skip Voiceflow call
+    }
+    // --- END TEST PDF MODIFICATION ---
+
     setConversation(prev => [...prev, { from: 'ai', message: '...Nova is writing a response' }]);
     scrollToBottom();
 
@@ -235,81 +253,49 @@ export const VanishInput = ({ services, setServices, active, setActive, initialC
 
   // --- Pusher Connection Effect ---
   useEffect(() => {
-    // Only proceed if sessionUserId is available
     if (!sessionUserId) {
       console.log("Pusher: Waiting for sessionUserId...");
       return;
     }
-
-    // Ensure environment variables are present
     const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
     const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
-
     if (!pusherKey || !pusherCluster) {
       console.error("Pusher Error: NEXT_PUBLIC_PUSHER_KEY or NEXT_PUBLIC_PUSHER_CLUSTER is not defined in environment variables.");
-      return; // Don't attempt to connect without keys
+      return;
     }
-
-    // Avoid reconnecting if already connected
     if (pusherClientRef.current) {
       console.log("Pusher: Already connected.");
       return;
     }
-
-    // Track processed document URLs using a ref to persist across rerenders
-    const processedDocumentURLs = new Set<string>();
-
     console.log("Pusher: Initializing connection...");
     try {
       const pusherClient = new Pusher(pusherKey, {
         cluster: pusherCluster,
-        // encrypted: true, // default is true for TLS
       });
-      pusherClientRef.current = pusherClient; // Store the instance
-
+      pusherClientRef.current = pusherClient;
       const channelName = `user-${sessionUserId}`;
       console.log(`Pusher: Subscribing to channel: ${channelName}`);
       const channel = pusherClient.subscribe(channelName);
 
-      // --- Bind Event Handlers ---
-      channel.bind('document-ready', (data: { documentURL: string }) => {
-        console.log(`Pusher: Received document-ready event for user ${sessionUserId}:`, data);
-        if (data.documentURL) {
-          // Get base URL without query parameters
-          const baseURL = data.documentURL.split('?')[0];
-
-          // Check if we've already processed this document
-          if (!processedDocumentURLs.has(baseURL)) {
-            processedDocumentURLs.add(baseURL);
-
-            // Add a timestamp to URL to ensure uniqueness if needed
-            const urlWithId = `${data.documentURL}${data.documentURL.includes('?') ? '&' : '?'}t=${Date.now()}`;
-
-            // Update conversation state with deduplication check
-            setConversation(prev => {
-              // Check if we already have this document in the conversation
-              const urlExists = prev.some(entry =>
-                entry.pdfUrl && entry.pdfUrl.split('?')[0] === baseURL
-              );
-
-              if (urlExists) {
-                console.log(`Prevented duplicate PDF: ${baseURL}`);
-                return prev; // Don't add duplicate
-              }
-
-              return [
-                ...prev,
-                { from: 'ai', message: 'Here is your PDF for review:', pdfUrl: urlWithId }
-              ];
-            });
-
-            // Ensure scroll happens after state update
+      channel.bind('document-ready', (data: { documentURL?: string; documentId?: string }) => {
+        console.log(`Pusher: Received event 'document-ready' on channel ${channelName}:`, data);
+        const eventDocumentURL = data.documentURL;
+        if (eventDocumentURL) {
+          const baseURL = eventDocumentURL.split('?')[0];
+          if (!processedDocumentURLsRef.current.has(baseURL)) {
+            processedDocumentURLsRef.current.add(baseURL);
+            console.log(`Pusher: Adding new PDF to conversation from 'document-ready' event: ${eventDocumentURL}`);
+            const urlWithId = `${eventDocumentURL}${eventDocumentURL.includes('?') ? '&' : '?'}t=${Date.now()}`;
+            setConversation(prev => [
+              ...prev,
+              { from: 'ai', message: `A new document is ready: ${data.documentId || 'View PDF'}`, pdfUrl: urlWithId }
+            ]);
             scrollToBottom();
           } else {
-            console.log(`Skipped duplicate document-ready event for URL: ${baseURL}`);
+            console.log(`Pusher: Duplicate PDF (already processed by this client instance): ${baseURL}`);
           }
         } else {
-          console.warn("Pusher: Received document-ready event without documentURL:", data);
+          console.warn("Pusher: 'document-ready' event received without a documentURL:", data);
         }
       });
 
@@ -340,15 +326,14 @@ export const VanishInput = ({ services, setServices, active, setActive, initialC
           console.log(`Pusher: Unsubscribing from channel ${channelName} and disconnecting.`);
           pusherClientRef.current.unsubscribe(channelName);
           pusherClientRef.current.disconnect();
-          pusherClientRef.current = null; // Clear the ref
+          pusherClientRef.current = null;
         }
       };
 
     } catch (error) {
       console.error("Pusher: Failed to initialize client:", error);
     }
-
-  }, [sessionUserId, setConversation, scrollToBottom]); // Dependencies: sessionUserId, setConversation, scrollToBottom
+  }, [sessionUserId, scrollToBottom]); // Removed setConversation, relying on processedDocumentURLsRef for de-dupe before setConversation
 
 
   // --- Polling Logic Removed ---
@@ -390,10 +375,7 @@ export const VanishInput = ({ services, setServices, active, setActive, initialC
                 </div>
               )}
               {item.pdfUrl && (
-                <PdfPreview
-                  pdfUrl={item.pdfUrl}
-                  className={cn(item.message ? 'mt-3' : '', 'pdf-preview-container')}
-                />
+                <PdfPreview pdfUrl={item.pdfUrl} />
               )}
             </div>
           </div>
