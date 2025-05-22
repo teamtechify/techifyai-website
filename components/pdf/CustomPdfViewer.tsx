@@ -49,7 +49,8 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pageWrapperRef = useRef<HTMLDivElement>(null);
   const initialCenteringDoneRef = useRef<boolean>(false);
-  const viewportCenterRatioRef = useRef<{ x: number; y: number }>({ x: 0.5, y: 0.5 }); // Ref for viewport center ratio
+  const viewportCenterRatioRef = useRef<{ x: number; y: number }>({ x: 0.5, y: 0.5 });
+  const prevScaleRef = useRef(scale); // Ref to store the previous scale
 
   const centerView = useCallback(() => {
     if (scrollContainerRef.current && pageWrapperRef.current) {
@@ -68,42 +69,75 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
     setNumPages(nextNumPages);
     setCurrentPageNumber(1);
     setScale(1.0); // Ensure scale is reset to 1.0 for new documents
-    initialCenteringDoneRef.current = false; // Reset for new document
-    // Centering will be handled by Page onRenderSuccess for the first page
-  }, []); // Removed centerView from dependencies as it's called by Page onRenderSuccess
+    initialCenteringDoneRef.current = false; // Reset for new document, initial top-alignment will be redone
+    prevScaleRef.current = 1.0; // Reset prevScaleRef as well when a new document loads
+    // Initial positioning is handled by Page onRenderSuccess
+  }, []);
 
   const handlePageRenderSuccess = useCallback(() => {
+    // This function is responsible for the VERY FIRST positioning of the PDF.
+    // It should run only once per document load for the first page at 100% scale.
     if (!initialCenteringDoneRef.current && currentPageNumber === 1 && scale === 1.0) {
-      // Using a timeout to ensure all layout calculations are stable
       setTimeout(() => {
-        centerView();
-        initialCenteringDoneRef.current = true;
-      }, 0);
+        if (scrollContainerRef.current && pageWrapperRef.current) {
+          const scrollEl = scrollContainerRef.current;
+          const pageWrapperEl = pageWrapperRef.current;
+
+          // Horizontally center the page
+          const newScrollLeft = (pageWrapperEl.offsetWidth - scrollEl.clientWidth) / 2;
+          scrollEl.scrollLeft = Math.max(0, newScrollLeft);
+          
+          // Scroll to the TOP of the page
+          scrollEl.scrollTop = 0;
+          
+          // Set the flag indicating initial special positioning is done.
+          initialCenteringDoneRef.current = true;
+        }
+      }, 0); // Timeout to ensure layout calculations are stable
     }
-  }, [centerView, currentPageNumber, scale]);
+  }, [currentPageNumber, scale]); // Dependencies: only re-memoize if these change. Refs are stable.
 
   useEffect(() => {
-    if (!scrollContainerRef.current || !pageWrapperRef.current) return;
+    // This effect handles zoom changes AFTER the initial top-alignment.
+    if (!scrollContainerRef.current || !pageWrapperRef.current) {
+      prevScaleRef.current = scale; // Keep prevScaleRef updated even if we return early
+      return;
+    }
+
+    // If initialCenteringDoneRef is false, it means handlePageRenderSuccess 
+    // hasn't completed its job for the initial load yet.
+    // We wait for it to complete before this effect manages subsequent zoom adjustments.
+    if (!initialCenteringDoneRef.current) {
+      prevScaleRef.current = scale; // Keep prevScaleRef updated
+      return;
+    }
 
     const scrollEl = scrollContainerRef.current;
     const pageEl = pageWrapperRef.current;
 
-    if (scale === 1.0) {
-      if (initialCenteringDoneRef.current) {
-        setTimeout(centerView, 10); // Recenter if already initialized and scale is 1.0
+    // Only act if scale has actually changed.
+    if (scale !== prevScaleRef.current) {
+      if (scale === 1.0) {
+        // If scale changed TO 1.0 (e.g., zoomed out to 100% after being zoomed in),
+        // perform a full re-center.
+        setTimeout(centerView, 10); // Using a small delay
+      } else {
+        // If scale changed TO a value other than 1.0 (zooming in or out),
+        // adjust scroll to maintain the focal point.
+        setTimeout(() => {
+          const newScrollLeft = (viewportCenterRatioRef.current.x * pageEl.offsetWidth) - scrollEl.clientWidth / 2;
+          const newScrollTop = (viewportCenterRatioRef.current.y * pageEl.offsetHeight) - scrollEl.clientHeight / 2;
+          
+          scrollEl.scrollLeft = Math.max(0, Math.min(newScrollLeft, scrollEl.scrollWidth - scrollEl.clientWidth));
+          scrollEl.scrollTop = Math.max(0, Math.min(newScrollTop, scrollEl.scrollHeight - scrollEl.clientHeight));
+        }, 0); // Timeout for layout stability
       }
-      // Initial centering is handled by onPageRenderSuccess
-    } else {
-      // Apply scroll adjustment to keep the stored ratio point in the center
-      setTimeout(() => {
-        const newScrollLeft = (viewportCenterRatioRef.current.x * pageEl.offsetWidth) - scrollEl.clientWidth / 2;
-        const newScrollTop = (viewportCenterRatioRef.current.y * pageEl.offsetHeight) - scrollEl.clientHeight / 2;
-        
-        scrollEl.scrollLeft = Math.max(0, Math.min(newScrollLeft, scrollEl.scrollWidth - scrollEl.clientWidth));
-        scrollEl.scrollTop = Math.max(0, Math.min(newScrollTop, scrollEl.scrollHeight - scrollEl.clientHeight));
-      }, 0); // Timeout to allow page to re-render at new scale
     }
-  }, [scale, centerView]); // Removed pageWrapperRef from deps as its direct props not used here, only its current value
+    
+    // Update prevScaleRef for the next comparison
+    prevScaleRef.current = scale;
+
+  }, [scale, centerView]); // Dependencies for the effect
 
   const goToPreviousPage = () => {
     setCurrentPageNumber(prevPageNumber => Math.max(prevPageNumber - 1, 1));
