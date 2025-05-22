@@ -50,7 +50,7 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
   const pageWrapperRef = useRef<HTMLDivElement>(null);
   const initialCenteringDoneRef = useRef<boolean>(false);
   const viewportCenterRatioRef = useRef<{ x: number; y: number }>({ x: 0.5, y: 0.5 });
-  const prevScaleRef = useRef(scale); // Ref to store the previous scale
+  const prevScaleRef = useRef(1.0);
 
   const centerView = useCallback(() => {
     if (scrollContainerRef.current && pageWrapperRef.current) {
@@ -68,76 +68,60 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
   const onDocumentLoadSuccess = useCallback(({ numPages: nextNumPages }: { numPages: number }) => {
     setNumPages(nextNumPages);
     setCurrentPageNumber(1);
-    setScale(1.0); // Ensure scale is reset to 1.0 for new documents
-    initialCenteringDoneRef.current = false; // Reset for new document, initial top-alignment will be redone
-    prevScaleRef.current = 1.0; // Reset prevScaleRef as well when a new document loads
-    // Initial positioning is handled by Page onRenderSuccess
+    setScale(1.0);
+    initialCenteringDoneRef.current = false;
+    prevScaleRef.current = 1.0;
   }, []);
 
   const handlePageRenderSuccess = useCallback(() => {
-    // This function is responsible for the VERY FIRST positioning of the PDF.
-    // It should run only once per document load for the first page at 100% scale.
     if (!initialCenteringDoneRef.current && currentPageNumber === 1 && scale === 1.0) {
       setTimeout(() => {
         if (scrollContainerRef.current && pageWrapperRef.current) {
           const scrollEl = scrollContainerRef.current;
           const pageWrapperEl = pageWrapperRef.current;
 
-          // Horizontally center the page
           const newScrollLeft = (pageWrapperEl.offsetWidth - scrollEl.clientWidth) / 2;
           scrollEl.scrollLeft = Math.max(0, newScrollLeft);
           
-          // Scroll to the TOP of the page
           scrollEl.scrollTop = 0;
           
-          // Set the flag indicating initial special positioning is done.
           initialCenteringDoneRef.current = true;
         }
-      }, 0); // Timeout to ensure layout calculations are stable
+      }, 0);
     }
-  }, [currentPageNumber, scale]); // Dependencies: only re-memoize if these change. Refs are stable.
+  }, [currentPageNumber, scale]);
 
   useEffect(() => {
-    // This effect handles zoom changes AFTER the initial top-alignment.
     if (!scrollContainerRef.current || !pageWrapperRef.current) {
-      prevScaleRef.current = scale; // Keep prevScaleRef updated even if we return early
+      prevScaleRef.current = scale;
       return;
     }
 
-    // If initialCenteringDoneRef is false, it means handlePageRenderSuccess 
-    // hasn't completed its job for the initial load yet.
-    // We wait for it to complete before this effect manages subsequent zoom adjustments.
     if (!initialCenteringDoneRef.current) {
-      prevScaleRef.current = scale; // Keep prevScaleRef updated
+      prevScaleRef.current = scale;
       return;
     }
 
     const scrollEl = scrollContainerRef.current;
     const pageEl = pageWrapperRef.current;
 
-    // Only act if scale has actually changed.
     if (scale !== prevScaleRef.current) {
       if (scale === 1.0) {
-        // If scale changed TO 1.0 (e.g., zoomed out to 100% after being zoomed in),
-        // perform a full re-center.
-        setTimeout(centerView, 10); // Using a small delay
+        setTimeout(centerView, 10);
       } else {
-        // If scale changed TO a value other than 1.0 (zooming in or out),
-        // adjust scroll to maintain the focal point.
         setTimeout(() => {
           const newScrollLeft = (viewportCenterRatioRef.current.x * pageEl.offsetWidth) - scrollEl.clientWidth / 2;
           const newScrollTop = (viewportCenterRatioRef.current.y * pageEl.offsetHeight) - scrollEl.clientHeight / 2;
           
           scrollEl.scrollLeft = Math.max(0, Math.min(newScrollLeft, scrollEl.scrollWidth - scrollEl.clientWidth));
           scrollEl.scrollTop = Math.max(0, Math.min(newScrollTop, scrollEl.scrollHeight - scrollEl.clientHeight));
-        }, 0); // Timeout for layout stability
+        }, 0);
       }
     }
     
-    // Update prevScaleRef for the next comparison
     prevScaleRef.current = scale;
 
-  }, [scale, centerView]); // Dependencies for the effect
+  }, [scale, centerView]);
 
   const goToPreviousPage = () => {
     setCurrentPageNumber(prevPageNumber => Math.max(prevPageNumber - 1, 1));
@@ -158,7 +142,6 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
       let ratioX = pageEl.offsetWidth > 0 ? viewportCenterXInPage / pageEl.offsetWidth : 0.5;
       let ratioY = pageEl.offsetHeight > 0 ? viewportCenterYInPage / pageEl.offsetHeight : 0.5;
 
-      // Clamp ratios to prevent issues if viewport center is outside the page content
       ratioX = Math.max(0, Math.min(1, ratioX));
       ratioY = Math.max(0, Math.min(1, ratioY));
 
@@ -168,11 +151,11 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
   };
 
   const zoomIn = () => {
-    handleZoom(Math.min(scale + 0.2, 3.0));
+    handleZoom(Math.min(scale + 0.2, 3.75));
   };
 
   const zoomOut = () => {
-    handleZoom(Math.max(scale - 0.2, 0.4));
+    handleZoom(Math.max(scale - 0.2, 0.5));
   };
 
   const handleDownload = async () => {
@@ -194,20 +177,18 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
       URL.revokeObjectURL(objectUrl);
     } catch (error) {
       console.error("Error downloading PDF:", error);
-      // You might want to show a user-facing error message here
       alert("Sorry, there was an issue downloading the PDF. Please try again or use the direct link if available.");
     } finally {
       setIsDownloading(false);
     }
   };
 
-  // Basic styling for the viewer and controls. You'll want to refine this with Tailwind CSS.
   const viewerStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    height: '100%', // Ensure parent container provides height
-    overflow: 'hidden', // Parent of Document/Page should handle scrolling if needed for content itself
+    height: '100%',
+    overflow: 'hidden',
   };
 
   const controlsStyle: React.CSSProperties = {
@@ -215,9 +196,9 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '8px',
-    backgroundColor: '#333', // Example background
+    backgroundColor: '#333',
     color: 'white',
-    flexWrap: 'wrap', // Allow controls to wrap on smaller screens
+    flexWrap: 'wrap',
     gap: '8px',
   };
   
@@ -233,18 +214,15 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
     gap: '8px',
   };
 
-
   const documentContainerStyle: React.CSSProperties = {
     flexGrow: 1,
     width: '100%',
     display: 'flex',
-    justifyContent: 'center', // Center the page within the container
+    justifyContent: 'center',
   };
-
 
   return (
     <div style={viewerStyle} className="bg-neutral-800 text-white w-full h-full flex flex-col">
-      {/* PDF Document Area - Moved Before Controls */}
       <ScrollContainer 
         innerRef={scrollContainerRef}
         className="flex-grow w-full overflow-auto bg-neutral-700 cursor-grab"
@@ -264,7 +242,7 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
             <div className="inline-block" ref={pageWrapperRef}>
               <Page 
                 pageNumber={currentPageNumber} 
-                scale={scale}
+                scale={scale * 0.8}
                 renderTextLayer={true}
                 renderAnnotationLayer={true}
                 className="shadow-lg"
@@ -277,7 +255,6 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
         )}
       </ScrollContainer>
 
-      {/* Controls Bar - Moved to the bottom */}
       <div style={controlsStyle} className="bg-neutral-900 p-2 flex items-center justify-center gap-2 flex-wrap shrink-0">
         <div style={pageControlsStyle} className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={goToPreviousPage} disabled={currentPageNumber <= 1}>
@@ -292,11 +269,11 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
         </div>
 
         <div style={zoomControlsStyle} className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={zoomOut} disabled={scale <= 0.4 || isDownloading}>
+          <Button variant="ghost" size="icon" onClick={zoomOut} disabled={scale <= 0.5 || isDownloading}>
             <ZoomOutIcon className="h-5 w-5" />
           </Button>
           <span>{(scale * 100).toFixed(0)}%</span>
-          <Button variant="ghost" size="icon" onClick={zoomIn} disabled={scale >= 3.0 || isDownloading}>
+          <Button variant="ghost" size="icon" onClick={zoomIn} disabled={scale >= 3.75 || isDownloading}>
             <ZoomInIcon className="h-5 w-5" />
           </Button>
         </div>
@@ -308,13 +285,6 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
             <DownloadIcon className="h-5 w-5" />
           )}
         </Button>
-
-        {/* Optional: Close button if this viewer manages the modal closing itself */}
-        {/* {onClose && (
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close viewer">
-            <XIcon className="h-5 w-5" /> {}
-          </Button>
-        )} */}
       </div>
     </div>
   );

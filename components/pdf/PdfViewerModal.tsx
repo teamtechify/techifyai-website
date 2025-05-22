@@ -34,7 +34,7 @@ export function PdfViewerModal({ isOpen, onClose, pdfUrl, documentTitle }: PdfVi
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogPortal>
-                <DialogOverlay className="fixed inset-0 bg-black/80 backdrop-blur-md transition-all duration-200 z-50" />
+                <DialogOverlay className="fixed inset-0 bg-transparent backdrop-blur-[3px] transition-all duration-200 z-50" />
                 <DialogContent
                     className={cn(
                         "fixed left-1/2 top-1/2 z-[60] grid w-full max-w-6xl -translate-x-1/2 -translate-y-1/2", // Ensure higher z-index than overlay
