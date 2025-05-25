@@ -45,7 +45,8 @@ export function PdfViewerModal({ isOpen, onClose, pdfUrl, documentTitle }: PdfVi
                 */}
                 {/* Close button for PDF Modal - styled like Nova chat close button */}
                 <div
-                    className="fixed top-6 right-6 hover:scale-110 hover:text-blue-300 text-3xl text-white cursor-pointer transition-all duration-300 z-[70]" // Ensure z-index is higher than DialogContent
+                    className="fixed top-6 right-6 hover:scale-110 hover:text-blue-300 text-3xl text-white cursor-pointer transition-all duration-300 z-[9999]" // MODIFIED: z-index to 9999
+                    style={{ pointerEvents: 'auto' }} // ADDED: Explicit pointer-events
                     onClick={onClose}
                     aria-label="Close PDF viewer"
                 >
@@ -59,9 +60,11 @@ export function PdfViewerModal({ isOpen, onClose, pdfUrl, documentTitle }: PdfVi
                         // e.preventDefault();
                     }}
                     className={cn(
-                        "grid duration-200", // REMOVED: max-w-[calc(100%-2rem)], sm:max-w-lg, rounded-lg, gap-4
+                        // "grid duration-200", // REMOVED: grid display
+                        "duration-200", // Kept duration, removed grid
+                        "flex flex-col items-center justify-center", // ADDED: Flexbox centering for its child (CustomPdfViewer)
                         "fixed left-1/2 top-1/2 z-[60] -translate-x-1/2 -translate-y-1/2",
-                        "bg-transparent p-0 overflow-visible border-0 shadow-none", // ADDED: border-0, shadow-none. Ensured bg-transparent, p-0, overflow-visible.
+                        "bg-transparent p-0 overflow-visible border-0 shadow-none", // MODIFIED: bg-neutral-900 back to bg-transparent
                         "w-screen h-screen", // Ensure it takes full screen
                         "pdf-modal-content-no-close" // Custom class to hide default Shadcn close
                     )}

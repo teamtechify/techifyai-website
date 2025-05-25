@@ -68,6 +68,17 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
   const controlsActivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
 
+  const viewerOnClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Close if the click is directly on viewerRef (the ultimate backdrop)
+    // OR if the click is on the scrollContainer itself (acting as an inner backdrop)
+    // but not on its children (the PDF page or scrollbars).
+    if (e.target === viewerRef.current || e.target === scrollContainerRef.current) {
+      if (onClose) {
+        onClose();
+      }
+    }
+  };
+
   const showControlsAndStartTimer = useCallback(() => {
     setAreControlsVisible(true);
     if (controlsActivityTimeoutRef.current) {
@@ -133,11 +144,8 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
   }, [showControlsAndStartTimer]);
 
   const handlePageRenderSuccess = useCallback(() => {
-    if (scrollContainerRef.current && pageWrapperRef.current) {
-      if (!initialCenteringDoneRef.current && currentPageNumber === 1) {
-        scrollContainerRef.current.scrollTop = 0;
-        initialCenteringDoneRef.current = true;
-      }
+    if (!initialCenteringDoneRef.current && currentPageNumber === 1) {
+       initialCenteringDoneRef.current = true; 
     }
   }, [currentPageNumber]);
 
@@ -150,15 +158,25 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
     const scrollEl = scrollContainerRef.current;
     const pageWrapperEl = pageWrapperRef.current;
 
-    if (pageContentScale === BASE_SCALE && prevPageContentScaleRef.current !== BASE_SCALE) {
-        scrollEl.scrollTop = 0;
-    }
-    const newScrollLeft = (pageWrapperEl.offsetWidth * pageContentScale - scrollEl.clientWidth) / 2;
-    scrollEl.scrollLeft = Math.max(0, newScrollLeft);
+    // Defer scroll adjustment to allow DOM to update after scale change
+    const timeoutId = setTimeout(() => {
+      if (scrollEl && pageWrapperEl) { // Add null check for refs inside timeout
+        const scaledWidth = pageWrapperEl.offsetWidth;
+        const scaledHeight = pageWrapperEl.offsetHeight;
+
+        let newScrollLeft = (scaledWidth - scrollEl.clientWidth) / 2;
+        let newScrollTop = (scaledHeight - scrollEl.clientHeight) / 2;
+
+        scrollEl.scrollLeft = Math.max(0, newScrollLeft);
+        scrollEl.scrollTop = Math.max(0, newScrollTop);
+      }
+    }, 0); // Delay of 0ms to push to next tick
 
     prevPageContentScaleRef.current = pageContentScale;
 
-  }, [pageContentScale]);
+    return () => clearTimeout(timeoutId); // Cleanup timeout
+
+  }, [pageContentScale, currentPageNumber]); // Removed numPages from dependencies, not directly used for centering
 
   const goToPreviousPage = () => {
     setCurrentPageNumber(prevPageNumber => Math.max(prevPageNumber - 1, 1));
@@ -218,28 +236,50 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center', 
-    width: '100%',       
-    height: '100%',      // This should be 100% of DialogContent
-    // No maxWidth here
+    justifyContent: 'center', // Added to help center the ScrollContainer if it's not full height
+    width: '100vw',
+    height: '100vh',
     overflow: 'visible', 
     position: 'relative',
-    // maxHeight: 'calc(100vh - 0px)', // REMOVED to prevent vertical clipping of zoomed PDF
+    pointerEvents: 'auto',
   };
 
   // documentContainerStyle is for the ScrollContainer itself
   const documentContainerStyle: React.CSSProperties = {
-    flexGrow: 1, 
+    // flexGrow: 1, // REMOVED: Don't let it grow beyond its content's needs or max-height
     width: '100%', 
-    height: '100%',       // Ensure height is 100% for a defined scroll area
-    display: 'flex',        // Added: Use flex to center Document/pageWrapperRef
-    alignItems: 'center',   // Added: Center vertically
-    justifyContent: 'center',// Added: Center horizontally
-    overflow: 'visible',    // REVERTED from 'auto' back to 'visible'
+    maxWidth: '100vw', // Ensure it doesn't exceed viewport width
+    maxHeight: '100vh', // Ensure it doesn't exceed viewport height
+    display: 'flex',        
+    alignItems: 'flex-start',
+    justifyContent: 'center', 
+    overflow: 'auto',    
+    padding: 0, 
+    margin: 0, 
+    boxSizing: 'border-box',
+    pointerEvents: 'auto',
+  };
+
+  const pageWrapperStyle: React.CSSProperties = {
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    margin: '0 auto', // MODIFIED: Vertical margin 0, horizontal auto
+    width: 'fit-content', 
+    height: 'fit-content', 
+  };
+
+  // Styles for the div containing the react-pdf Page component
+  const pageStyle: React.CSSProperties = {
   };
 
   return (
-    // The main div (viewerRef) now has maxWidth and maxHeight applied via viewerStyle
-    <div style={viewerStyle} className="text-white flex flex-col" ref={viewerRef}>
+    <div 
+      style={viewerStyle} 
+      className="text-white flex flex-col" 
+      ref={viewerRef} 
+      onClick={viewerOnClick}
+    >
       <ScrollContainer 
         innerRef={scrollContainerRef}
         className={cn(
@@ -260,22 +300,16 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
             loading={<div className="flex justify-center items-center h-full"><p>Loading PDF...</p></div>}
             error={<div className="flex justify-center items-center h-full text-red-400"><p>Error loading PDF. Please try again.</p></div>}
           >
-            <div 
-              className="inline-block" // Keep inline-block for pageWrapper to size to its Page content
-              ref={pageWrapperRef}
-              style={{
-                transform: `scale(${pageContentScale})`,
-                transformOrigin: 'center center',
-                transition: 'transform 0.2s ease-out', 
-              }}
-            >
+            <div ref={pageWrapperRef} style={pageWrapperStyle} className="bg-neutral-900 shadow-2xl rounded-md border border-neutral-700"> 
               <Page 
-                pageNumber={currentPageNumber} 
-                scale={pageContentScale * 0.80} // RESTORED: Link internal PDF scale to pageContentScale with adjustment
+                key={`page_${currentPageNumber}`}
+                pageNumber={currentPageNumber}
+                scale={pageContentScale}
+                onRenderSuccess={handlePageRenderSuccess}
+                className="pdf-page-canvas"
                 renderTextLayer={true}
                 renderAnnotationLayer={true}
-                className="bg-white"
-                onRenderSuccess={handlePageRenderSuccess}
+                canvasBackground="transparent" // ADDED: Prevent white flash
               />
             </div>
           </Document>
@@ -287,10 +321,11 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
       {/* Controls Toolbar - fixed at bottom, with transition for visibility */}
       <div
         className={cn(
-            "fixed bottom-0 left-1/2 -translate-x-1/2 mb-3 px-6 py-2 flex items-center justify-center rounded-lg bg-black/80 backdrop-blur-sm shadow-xl z-[70] transition-opacity duration-300 ease-in-out",
+            "fixed bottom-0 left-1/2 -translate-x-1/2 mb-3 px-4 py-2 flex items-center justify-center rounded-lg bg-black/80 backdrop-blur-sm shadow-xl z-[70] transition-opacity duration-300 ease-in-out",
             areControlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none',
             "gap-x-2 sm:gap-x-3"
         )}
+        style={{ pointerEvents: 'auto' }}
         onMouseEnter={() => { setIsMouseOverToolbar(true); showControlsAndStartTimer(); }}
         onMouseLeave={() => {
           setIsMouseOverToolbar(false);
