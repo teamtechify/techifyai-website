@@ -3,7 +3,7 @@
 import { Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { X } from "lucide-react";
+import { FaX } from "react-icons/fa6";
 import { useEffect } from "react";
 import { CustomPdfViewer } from "@/components/pdf/CustomPdfViewer"; // Import the new custom viewer
 
@@ -43,6 +43,14 @@ export function PdfViewerModal({ isOpen, onClose, pdfUrl, documentTitle }: PdfVi
                     </div>
                 )}
                 */}
+                {/* Close button for PDF Modal - styled like Nova chat close button */}
+                <div
+                    className="fixed top-6 right-6 hover:scale-110 hover:text-blue-300 text-3xl text-white cursor-pointer transition-all duration-300 z-[70]" // Ensure z-index is higher than DialogContent
+                    onClick={onClose}
+                    aria-label="Close PDF viewer"
+                >
+                    <FaX />
+                </div>
                 <DialogContent
                     onInteractOutside={(e) => { 
                         // Prevent closing on interact outside if it's the PDF itself, which might happen with react-pdf interactions
@@ -51,13 +59,11 @@ export function PdfViewerModal({ isOpen, onClose, pdfUrl, documentTitle }: PdfVi
                         // e.preventDefault();
                     }}
                     className={cn(
-                        "fixed left-1/2 top-1/2 z-[60] -translate-x-1/2 -translate-y-1/2", // Centering
-                        "bg-transparent", // Keep background transparent
-                        "p-0", // No padding on DialogContent itself
-                        "overflow-visible", // Allow child shadows (e.g., from PDF page) to be visible
-                        "w-auto h-auto", // Allow content to dictate size
-                        "max-w-[90vw]", // Match CustomPdfViewer's maxWidth to prevent constraint
-                        "pdf-modal-content-no-close" // Added marker class
+                        "grid duration-200", // REMOVED: max-w-[calc(100%-2rem)], sm:max-w-lg, rounded-lg, gap-4
+                        "fixed left-1/2 top-1/2 z-[60] -translate-x-1/2 -translate-y-1/2",
+                        "bg-transparent p-0 overflow-visible border-0 shadow-none", // ADDED: border-0, shadow-none. Ensured bg-transparent, p-0, overflow-visible.
+                        "w-screen h-screen", // Ensure it takes full screen
+                        "pdf-modal-content-no-close" // Custom class to hide default Shadcn close
                     )}
                 >
                     {/* CustomPdfViewer is now the direct child and will define its own size/max-size */}

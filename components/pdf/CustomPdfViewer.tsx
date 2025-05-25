@@ -6,7 +6,7 @@ import ScrollContainer from 'react-indiana-drag-scroll';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { Button } from "@/components/ui/button"; // Assuming you have a Button component
-import { ZoomInIcon, ZoomOutIcon, DownloadIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'; // XIcon removed
+import { ZoomInIcon, ZoomOutIcon, DownloadIcon, ChevronLeftIcon, ChevronRightIcon, RotateCcwIcon } from 'lucide-react'; // Added RotateCcwIcon
 import { cn } from '@/lib/utils'; // Import cn for conditional classnames
 
 // Configure PDF.js worker
@@ -15,6 +15,18 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url,
 ).toString();
+
+// --- START NEW ZOOM CONSTANTS ---
+const BASE_SCALE = 0.9; // MODIFIED: New baseline: 0.9 actual scale is 100% displayed
+const ZOOM_STEP_PERCENTAGE = 0.10; // User-facing 10% increments
+const ACTUAL_ZOOM_STEP = BASE_SCALE * ZOOM_STEP_PERCENTAGE; // Actual increment for pageContentScale
+
+const DISPLAY_MIN_ZOOM_PERCENT = 0.50; // e.g., 50% displayed
+const DISPLAY_MAX_ZOOM_PERCENT = 2.50; // e.g., 250% displayed
+
+const MIN_ACTUAL_SCALE = BASE_SCALE * DISPLAY_MIN_ZOOM_PERCENT;
+const MAX_ACTUAL_SCALE = BASE_SCALE * DISPLAY_MAX_ZOOM_PERCENT;
+// --- END NEW ZOOM CONSTANTS ---
 
 interface CustomPdfViewerProps {
   pdfUrl: string;
@@ -44,7 +56,7 @@ const getFilenameFromUrl = (url: string, fallbackSuffix: string = "blueprint.pdf
 export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [currentPageNumber, setCurrentPageNumber] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1.0);
+  const [pageContentScale, setPageContentScale] = useState<number>(BASE_SCALE);
   const [isDownloading, setIsDownloading] = useState(false);
   const [areControlsVisible, setAreControlsVisible] = useState(true);
   const [isMouseOverToolbar, setIsMouseOverToolbar] = useState(false);
@@ -52,10 +64,9 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pageWrapperRef = useRef<HTMLDivElement>(null);
   const initialCenteringDoneRef = useRef<boolean>(false);
-  const viewportCenterRatioRef = useRef<{ x: number; y: number }>({ x: 0.5, y: 0.5 });
-  const prevScaleRef = useRef(1.0);
+  const prevPageContentScaleRef = useRef(BASE_SCALE);
   const controlsActivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const viewerRef = useRef<HTMLDivElement>(null); // Ref for the main viewer div
+  const viewerRef = useRef<HTMLDivElement>(null);
 
   const showControlsAndStartTimer = useCallback(() => {
     setAreControlsVisible(true);
@@ -115,54 +126,39 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
   const onDocumentLoadSuccess = useCallback(({ numPages: nextNumPages }: { numPages: number }) => {
     setNumPages(nextNumPages);
     setCurrentPageNumber(1);
-    setScale(1.0);
+    setPageContentScale(BASE_SCALE);
     initialCenteringDoneRef.current = false;
-    prevScaleRef.current = 1.0;
+    prevPageContentScaleRef.current = BASE_SCALE;
     showControlsAndStartTimer();
   }, [showControlsAndStartTimer]);
 
   const handlePageRenderSuccess = useCallback(() => {
-    if (!initialCenteringDoneRef.current && currentPageNumber === 1) {
-      setTimeout(() => {
-        if (scrollContainerRef.current && pageWrapperRef.current) {
-          const scrollEl = scrollContainerRef.current;
-          const pageWrapperEl = pageWrapperRef.current;
-
-          const newScrollLeft = (pageWrapperEl.offsetWidth - scrollEl.clientWidth) / 2;
-          scrollEl.scrollLeft = Math.max(0, newScrollLeft);
-          
-          scrollEl.scrollTop = 0;
-          
-          initialCenteringDoneRef.current = true;
-        }
-      }, 0);
+    if (scrollContainerRef.current && pageWrapperRef.current) {
+      if (!initialCenteringDoneRef.current && currentPageNumber === 1) {
+        scrollContainerRef.current.scrollTop = 0;
+        initialCenteringDoneRef.current = true;
+      }
     }
   }, [currentPageNumber]);
 
   useEffect(() => {
-    if (!scrollContainerRef.current || !pageWrapperRef.current || !initialCenteringDoneRef.current) {
-      prevScaleRef.current = scale;
+    if (!scrollContainerRef.current || !pageWrapperRef.current) {
+      prevPageContentScaleRef.current = pageContentScale;
       return;
     }
 
     const scrollEl = scrollContainerRef.current;
-    const pageEl = pageWrapperRef.current;
+    const pageWrapperEl = pageWrapperRef.current;
 
-    if (scale !== prevScaleRef.current) {
-        setTimeout(() => {
-          const prevActualScale = prevScaleRef.current * 0.80;
-          const currentActualScale = scale * 0.80;
-          const newScrollLeft = (viewportCenterRatioRef.current.x * pageEl.offsetWidth * (currentActualScale / prevActualScale) ) - scrollEl.clientWidth / 2;
-          const newScrollTop = (viewportCenterRatioRef.current.y * pageEl.offsetHeight * (currentActualScale / prevActualScale)) - scrollEl.clientHeight / 2;
-          
-          scrollEl.scrollLeft = Math.max(0, Math.min(newScrollLeft, scrollEl.scrollWidth - scrollEl.clientWidth));
-          scrollEl.scrollTop = Math.max(0, Math.min(newScrollTop, scrollEl.scrollHeight - scrollEl.clientHeight));
-        }, 0);
+    if (pageContentScale === BASE_SCALE && prevPageContentScaleRef.current !== BASE_SCALE) {
+        scrollEl.scrollTop = 0;
     }
-    
-    prevScaleRef.current = scale;
+    const newScrollLeft = (pageWrapperEl.offsetWidth * pageContentScale - scrollEl.clientWidth) / 2;
+    scrollEl.scrollLeft = Math.max(0, newScrollLeft);
 
-  }, [scale]);
+    prevPageContentScaleRef.current = pageContentScale;
+
+  }, [pageContentScale]);
 
   const goToPreviousPage = () => {
     setCurrentPageNumber(prevPageNumber => Math.max(prevPageNumber - 1, 1));
@@ -175,31 +171,20 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
   };
 
   const handleZoom = (newScale: number) => {
-    if (scrollContainerRef.current && pageWrapperRef.current) {
-      const scrollEl = scrollContainerRef.current;
-      const pageEl = pageWrapperRef.current;
-
-      const viewportCenterXInPage = scrollEl.scrollLeft + scrollEl.clientWidth / 2;
-      const viewportCenterYInPage = scrollEl.scrollTop + scrollEl.clientHeight / 2;
-
-      let ratioX = pageEl.offsetWidth > 0 ? viewportCenterXInPage / pageEl.offsetWidth : 0.5;
-      let ratioY = pageEl.offsetHeight > 0 ? viewportCenterYInPage / pageEl.offsetHeight : 0.5;
-
-      ratioX = Math.max(0, Math.min(1, ratioX));
-      ratioY = Math.max(0, Math.min(1, ratioY));
-
-      viewportCenterRatioRef.current = { x: ratioX, y: ratioY };
-    }
-    setScale(newScale);
+    setPageContentScale(newScale);
     showControlsAndStartTimer();
   };
 
   const zoomIn = () => {
-    handleZoom(Math.min(scale + 0.2, 4.68));
+    handleZoom(Math.min(pageContentScale + ACTUAL_ZOOM_STEP, MAX_ACTUAL_SCALE));
   };
 
   const zoomOut = () => {
-    handleZoom(Math.max(scale - 0.2, 0.5));
+    handleZoom(Math.max(pageContentScale - ACTUAL_ZOOM_STEP, MIN_ACTUAL_SCALE));
+  };
+
+  const resetZoom = () => {
+    handleZoom(BASE_SCALE);
   };
 
   const handleDownload = async () => {
@@ -232,22 +217,24 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
   const viewerStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center', // Center ScrollContainer horizontally
-    // width: '100%', // No longer 100% of parent, but defines its own max extent
-    // height: '100%',
-    maxWidth: '90vw', // Max width of the PDF viewer area
-    maxHeight: '90vh', // Max height of the PDF viewer area (allows space for toolbar too)
-    overflow: 'hidden', // The viewer itself should not scroll, ScrollContainer does
-    position: 'relative', // For fixed positioning of controls relative to this viewer box
+    alignItems: 'center', 
+    width: '100%',       
+    height: '100%',      // This should be 100% of DialogContent
+    // No maxWidth here
+    overflow: 'visible', 
+    position: 'relative',
+    // maxHeight: 'calc(100vh - 0px)', // REMOVED to prevent vertical clipping of zoomed PDF
   };
 
   // documentContainerStyle is for the ScrollContainer itself
   const documentContainerStyle: React.CSSProperties = {
     flexGrow: 1, 
     width: '100%', 
-    // Removed display: 'flex' and justifyContent: 'center' to allow content to align top
-    paddingTop: '0rem', 
-    paddingBottom: '0rem', 
+    height: '100%',       // Ensure height is 100% for a defined scroll area
+    display: 'flex',        // Added: Use flex to center Document/pageWrapperRef
+    alignItems: 'center',   // Added: Center vertically
+    justifyContent: 'center',// Added: Center horizontally
+    overflow: 'visible',    // REVERTED from 'auto' back to 'visible'
   };
 
   return (
@@ -255,16 +242,15 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
     <div style={viewerStyle} className="text-white flex flex-col" ref={viewerRef}>
       <ScrollContainer 
         innerRef={scrollContainerRef}
-        // ScrollContainer takes up space defined by viewerStyle minus toolbar space (implicitly via flex-grow)
         className={cn(
-          "flex-grow w-full overflow-auto cursor-grab pdf-scroll-container",
+          "w-full h-full pdf-scroll-container", 
           areControlsVisible ? 'scrollbar-active' : 'scrollbar-inactive'
         )}
         draggingClassName="cursor-grabbing"
         vertical={true}
         horizontal={true}
-        hideScrollbars={false}
-        style={documentContainerStyle}
+        hideScrollbars={false} // Explicitly false, though default
+        style={documentContainerStyle} // Apply the new centering styles
       >
         {pdfUrl ? (
           <Document
@@ -273,15 +259,22 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
             onLoadError={(error) => console.error('Error while loading document!', error.message)}
             loading={<div className="flex justify-center items-center h-full"><p>Loading PDF...</p></div>}
             error={<div className="flex justify-center items-center h-full text-red-400"><p>Error loading PDF. Please try again.</p></div>}
-            className="flex justify-center"
           >
-            <div className="inline-block" ref={pageWrapperRef}>
+            <div 
+              className="inline-block" // Keep inline-block for pageWrapper to size to its Page content
+              ref={pageWrapperRef}
+              style={{
+                transform: `scale(${pageContentScale})`,
+                transformOrigin: 'center center',
+                transition: 'transform 0.2s ease-out', 
+              }}
+            >
               <Page 
                 pageNumber={currentPageNumber} 
-                scale={scale * 0.80}
+                scale={pageContentScale * 0.80} // RESTORED: Link internal PDF scale to pageContentScale with adjustment
                 renderTextLayer={true}
                 renderAnnotationLayer={true}
-                className="shadow-2xl bg-white"
+                className="bg-white"
                 onRenderSuccess={handlePageRenderSuccess}
               />
             </div>
@@ -294,9 +287,9 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
       {/* Controls Toolbar - fixed at bottom, with transition for visibility */}
       <div
         className={cn(
-            "fixed bottom-0 left-1/2 -translate-x-1/2 mb-3 p-2 flex items-center justify-center rounded-lg bg-black/80 backdrop-blur-sm shadow-xl z-[70] transition-opacity duration-300 ease-in-out",
+            "fixed bottom-0 left-1/2 -translate-x-1/2 mb-3 px-6 py-2 flex items-center justify-center rounded-lg bg-black/80 backdrop-blur-sm shadow-xl z-[70] transition-opacity duration-300 ease-in-out",
             areControlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none',
-            "gap-x-2 sm:gap-x-3" // Reduced gap between control groups
+            "gap-x-2 sm:gap-x-3"
         )}
         onMouseEnter={() => { setIsMouseOverToolbar(true); showControlsAndStartTimer(); }}
         onMouseLeave={() => {
@@ -307,24 +300,29 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
       >
         {/* Page navigation controls */}
         <div className="flex items-center gap-x-1"> {/* Reduced inner gap */}
-          <Button variant="ghost" size="icon" onClick={goToPreviousPage} disabled={currentPageNumber <= 1} className={cn("text-white hover:bg-white/20", currentPageNumber > 1 ? "cursor-pointer" : "cursor-not-allowed")} aria-label="Previous Page">
+          <Button variant="ghost" size="icon" onClick={goToPreviousPage} disabled={currentPageNumber <= 1} className="text-white hover:text-blue-300 disabled:text-gray-500">
             <ChevronLeftIcon className="h-5 w-5" />
           </Button>
-          <span className="text-xs text-neutral-300 whitespace-nowrap">
-            Page {currentPageNumber} of {numPages || '--'}
+          <span className="text-sm tabular-nums whitespace-nowrap">
+            {currentPageNumber} of {numPages || '--'}
           </span>
-          <Button variant="ghost" size="icon" onClick={goToNextPage} disabled={currentPageNumber >= (numPages || 0)} className={cn("text-white hover:bg-white/20", currentPageNumber < (numPages || 0) ? "cursor-pointer" : "cursor-not-allowed")} aria-label="Next Page">
+          <Button variant="ghost" size="icon" onClick={goToNextPage} disabled={currentPageNumber >= (numPages || 0)} className="text-white hover:text-blue-300 disabled:text-gray-500">
             <ChevronRightIcon className="h-5 w-5" />
           </Button>
         </div>
 
         {/* Zoom controls */}
         <div className="flex items-center gap-x-1"> {/* Reduced inner gap */}
-          <Button variant="ghost" size="icon" onClick={zoomOut} disabled={(scale * 0.80) <= 0.4 || isDownloading} className={cn("text-white hover:bg-white/20", (scale * 0.80) > 0.4 && !isDownloading ? "cursor-pointer" : "cursor-not-allowed")} aria-label="Zoom Out">
+          <Button variant="ghost" size="icon" onClick={zoomOut} className="text-white hover:text-blue-300">
             <ZoomOutIcon className="h-5 w-5" />
           </Button>
-          <span className="text-xs text-neutral-300 whitespace-nowrap w-10 text-center">{(scale * 100).toFixed(0)}%</span>
-          <Button variant="ghost" size="icon" onClick={zoomIn} disabled={(scale * 0.80) >= 3.75 || isDownloading} className={cn("text-white hover:bg-white/20", (scale * 0.80) < 3.75 && !isDownloading ? "cursor-pointer" : "cursor-not-allowed")} aria-label="Zoom In">
+          <Button variant="ghost" size="icon" onClick={resetZoom} className="text-white hover:text-blue-300">
+            <RotateCcwIcon className="h-5 w-5" />
+          </Button>
+          <span className="text-sm tabular-nums w-12 text-center">
+            {Math.round((pageContentScale / BASE_SCALE) * 100)}%
+          </span>
+          <Button variant="ghost" size="icon" onClick={zoomIn} className="text-white hover:text-blue-300">
             <ZoomInIcon className="h-5 w-5" />
           </Button>
         </div>
