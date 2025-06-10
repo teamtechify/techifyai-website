@@ -60,7 +60,7 @@ export const GraphSection = () => {
                             <div className='w-4 h-4 rounded-[50px] bg-[#7bf1a8]' />
                             <p className='uppercase text-white/20'>Total Earnings:</p>
                         </div>
-                        <p className='text-white'>${CalculateEarnings()}</p>
+                        <p className='text-white'>${FormatNumberWithCommasSimple(CalculateEarnings())}</p>
                     </div>
                 </div>
                 <div className='w-72 absolute bottom-34 right-0'>
@@ -113,7 +113,7 @@ export const GraphSection = () => {
                             <div className='w-4 h-4 rounded-[50px] bg-[#7bf1a8]' />
                             <p className='uppercase text-white/20'>Total Earnings:</p>
                         </div>
-                        <p className='text-white'>${CalculateEarnings()}</p>
+                        <p className='text-white'>${FormatNumberWithCommasSimple(CalculateEarnings())}</p>
                     </div>
                 </div>
                 <div className='mt-2'>

@@ -1,11 +1,9 @@
 'use client'
 
-import { animated, useSpring } from '@react-spring/web';
-import { HTMLProps, ReactNode, useEffect, useRef, useState } from 'react';
+import React, { ReactNode, useEffect, useRef, useState } from 'react';
+import { useSpring, animated } from '@react-spring/web';
 
-type AnimatedDivProps = HTMLProps<HTMLDivElement>;
-
-export const FadeInComponent = ({ children }: { children: ReactNode }) => {
+export const FadeInComponent = ({children}: {children: ReactNode}) => {
     const ref = useRef<HTMLDivElement | null>(null); // Reference for the component
     const [isVisible, setIsVisible] = useState(false); // State to track visibility
 
@@ -43,7 +41,8 @@ export const FadeInComponent = ({ children }: { children: ReactNode }) => {
     }, []);
 
     return (
-        <animated.div {...props as any} ref={ref}>
+        // @ts-expect-error animated bs
+        <animated.div ref={ref} style={props}>
             {children}
         </animated.div>
     );
