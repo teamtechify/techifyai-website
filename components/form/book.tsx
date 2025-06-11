@@ -76,12 +76,11 @@ export const BookFormComponent = ({ close }: { close: Function }) => {
                 }, 2000)
             } else {
                 setBookingStatus("Booking failed.");
-                console.error("Booking failed:", data.error || 'Unknown error'); // Log specific error message if available
-                setBookingStatus(`Booking failed: ${data.error?.message || 'Please try again.'}`); // Show a more specific error if possible
+                console.error("Booking failed:", data);
             }
         } catch (err) {
-            setBookingStatus("Error booking slot. Please try again later."); // Generic user message
-            console.error("Error during booking API call:", err instanceof Error ? err.message : 'Unknown error'); // Log generic error message
+            setBookingStatus("Error booking slot.");
+            console.error(err);
         }
     };
 
@@ -98,96 +97,96 @@ export const BookFormComponent = ({ close }: { close: Function }) => {
     };
 
     return (
-        <article className="fixed top-0 left-0 bg-black w-full z-20 h-screen overflow-auto pt-20 lg:pt-32">
-            {loading ? <Fragment>
-                <p className="text-white">Loading...</p>
-            </Fragment>
-                : <Fragment>
-                    <div className={`absolute lg:top-[-100px] left-0 w-full h-full duration-500 transition-all ${bgLoading ? 'opacity-0' : 'opacity-100'}`}>
-                        <HeroVideo src="2f8877f802e241bd4b51308e41e8ddd5" overlay={`bg-[rgba(0,0,0,.8)] min-h-[240px]`} />
-                    </div>
-                    <div className="max-w-7xl px-4 mx-auto py-8 w-full relative z-10">
-                        <div className="flex justify-end">
-                            <div className="text-white text-xl pr-4" onClick={() => close()}>
-                                {/* @ts-ignore */}
-                                <FaX />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-                            <div>
-                                <label className="text-white block mb-1">FULL NAME*</label>
-                                <input
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="p-2 bg-white/10 text-white rounded-md w-full"
-                                    required
-                                    maxLength={100}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-white block mb-1">EMAIL ADDRESS*</label>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="p-2 bg-white/10 text-white rounded-md w-full"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <label className="text-white block text-lg mb-2">BOOK A SLOT</label>
-                        <div className="bg-[#0a0a0a] p-4 rounded-md space-y-6 relative">
-                            <h2 className="lg:hidden text-white font-bold text-sm lg:text-lg text-center">{currentDate.toDateString()} ({userTimeZone})</h2>
-                            <div className="lg:hidden flex justify-between items-center mb-12">
-                                <button onClick={goToPreviousDay} className="bg-white/10 text-xs lg:text-base text-white px-4 py-2 rounded-md cursor-pointer hover:scale-105 duration-300 transition-all">Previous Day</button>
-                                <button onClick={goToNextDay} className="bg-white/10 text-xs lg:text-base text-white px-4 py-2 rounded-md cursor-pointer hover:scale-105 duration-300 transition-all">Next Day</button>
-                            </div>
-                            <div className="hidden lg:flex justify-between items-center mb-12">
-                                <button onClick={goToPreviousDay} className="bg-white/10 text-xs lg:text-base text-white px-4 py-2 rounded-md cursor-pointer hover:scale-105 duration-300 transition-all">Previous Day</button>
-                                <h2 className="text-white font-bold text-sm lg:text-lg">{currentDate.toDateString()} ({userTimeZone})</h2>
-                                <button onClick={goToNextDay} className="bg-white/10 text-xs lg:text-base text-white px-4 py-2 rounded-md cursor-pointer hover:scale-105 duration-300 transition-all">Next Day</button>
-                            </div>
-                            {Object.entries(slots).map(([date, times]) => (
-                                <div key={date}>
-                                    <h3 className="text-lg font-bold text-white mb-2 text-center">
-                                        {new Date(date).toLocaleDateString("en-US", {
-                                            weekday: "long",
-                                            year: "numeric",
-                                            month: "long",
-                                            day: "numeric",
-                                            timeZone: userTimeZone,
-                                        })}
-                                    </h3>
-                                    <div className="grid grid-cols-3 lg:grid-cols-5 gap-2">
-                                        {(times as { time: string }[]).map((slot) => (
-                                            <button
-                                                key={slot.time}
-                                                onClick={() => bookSlot(slot.time)}
-                                                className="px-3 py-1 text-base bg-black text-white hover:bg-white/20 transition-all duration-300 hover:scale-105 py-2"
-                                            >
-                                                {new Date(slot.time).toLocaleTimeString([], {
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                })}
-                                            </button>
-                                        ))}
-                                    </div>
+        <article className="fixed top-0 left-0 bg-black/75 w-full z-20 h-screen overflow-auto pt-20 lg:pt-32">
+            <div className="lg:absolute lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 w-full max-w-4xl bg-black lg:p-12 border-2 border-white rounded-xl">
+                {loading ? <div className="h-screen max-h-[768px] w-full flex items-center justify-center">
+                    <div className="loader" />
+                </div>
+                    : <Fragment>
+                        {/* <div className={`absolute left-0 w-full h-full duration-500 transition-all ${bgLoading ? 'opacity-0' : 'opacity-100'}`}>
+                            <HeroVideo src="2f8877f802e241bd4b51308e41e8ddd5" overlay={`bg-[rgba(0,0,0,.8)] min-h-[240px]`} />
+                        </div> */}
+                        <div className="max-w-7xl px-4 mx-auto py-8 w-full relative z-10">
+                            <div className="flex justify-end">
+                                <div className="text-white text-xl pr-4 cursor-pointer hover:scale-105" onClick={() => close()}>
+                                    {/* @ts-ignore */}
+                                    <FaX />
                                 </div>
-                            ))}
-                        </div>
-                        {close && <div className="flex justify-center mt-8">
-                            <ButtonMain onClick={close}>
-                                CLOSE
-                            </ButtonMain>
-                        </div>}
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <label className="text-white block mb-1">FULL NAME*</label>
+                                    <input
+                                        type="text"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        className="p-2 bg-white/10 text-white rounded-md w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-white block mb-1">EMAIL ADDRESS*</label>
+                                    <input
+                                        type="text"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="p-2 bg-white/10 text-white rounded-md w-full"
+                                    />
+                                </div>
+                            </div>
 
-                        {bookingStatus && (
-                            <p className="text-white mt-4 font-semibold">{bookingStatus}</p>
-                        )}
-                    </div>
-                </Fragment>}
+                            <label className="text-white block text-lg mb-2">BOOK A SLOT</label>
+                            <div className="bg-[#0a0a0a] p-4 rounded-md space-y-6 relative">
+                                <h2 className="lg:hidden text-white font-bold text-sm lg:text-lg text-center">{currentDate.toDateString()} ({userTimeZone})</h2>
+                                <div className="lg:hidden flex justify-between items-center mb-12">
+                                    <button onClick={goToPreviousDay} className="bg-white/10 text-xs lg:text-base text-white px-4 py-2 rounded-md cursor-pointer hover:scale-105 duration-300 transition-all">Previous Day</button>
+                                    <button onClick={goToNextDay} className="bg-white/10 text-xs lg:text-base text-white px-4 py-2 rounded-md cursor-pointer hover:scale-105 duration-300 transition-all">Next Day</button>
+                                </div>
+                                <div className="hidden lg:flex justify-between items-center mb-12">
+                                    <button onClick={goToPreviousDay} className="bg-white/10 text-xs lg:text-base text-white px-4 py-2 rounded-md cursor-pointer hover:scale-105 duration-300 transition-all">Previous Day</button>
+                                    <h2 className="text-white font-bold text-sm lg:text-lg">{currentDate.toDateString()} ({userTimeZone})</h2>
+                                    <button onClick={goToNextDay} className="bg-white/10 text-xs lg:text-base text-white px-4 py-2 rounded-md cursor-pointer hover:scale-105 duration-300 transition-all">Next Day</button>
+                                </div>
+                                {Object.entries(slots).map(([date, times]) => (
+                                    <div key={date}>
+                                        <h3 className="text-lg font-bold text-white mb-2 text-center">
+                                            {new Date(date).toLocaleDateString("en-US", {
+                                                weekday: "long",
+                                                year: "numeric",
+                                                month: "long",
+                                                day: "numeric",
+                                                timeZone: userTimeZone,
+                                            })}
+                                        </h3>
+                                        <div className="grid grid-cols-3 lg:grid-cols-5 gap-2">
+                                            {(times as { time: string }[]).map((slot) => (
+                                                <button
+                                                    key={slot.time}
+                                                    onClick={() => bookSlot(slot.time)}
+                                                    className="px-3 py-1 text-base bg-black text-white hover:bg-white/20 transition-all duration-300 hover:scale-105 py-2"
+                                                >
+                                                    {new Date(slot.time).toLocaleTimeString([], {
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                    })}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {close && <div className="flex justify-center mt-8">
+                                <ButtonMain onClick={close}>
+                                    CLOSE
+                                </ButtonMain>
+                            </div>}
+
+                            {bookingStatus && (
+                                <p className="text-white mt-4 font-semibold">{bookingStatus}</p>
+                            )}
+                        </div>
+                    </Fragment>}
+            </div>
+
         </article>
     );
 };

@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.CAL_KEY;
+  const apiKey = process.env.CAL_API_KEY;
   const eventTypeId = process.env.CAL_EVENT_TYPE_ID;
 
   if (!apiKey || !eventTypeId) {

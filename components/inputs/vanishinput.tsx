@@ -349,14 +349,16 @@ export const VanishInput = ({ services, setServices, active, setActive, initialC
   return (
     <div className={`w-full flex flex-col h-full`}> {/* Ensure h-full to take space from parent */}
       {/* Message display area - takes up most of the space and is scrollable */}
-      <div
+                    <div
         ref={scrollContainerRef}
-        className={`flex-grow overflow-y-auto space-y-4 ${active ? 'p-4' : 'p-0'}`}
+        className={`flex-grow overflow-y-auto flex justify-center ${active ? 'p-4' : 'p-0'}`}
         onClick={() => !active && setActive(true)} // Allow clicking messages area to activate if not active
       >
-        {/* Render messages or placeholder */}
-        {active && conversation.length > 0 && conversation.map((item, index) => (
-          <div key={`msg-${index}-${item.from}-${item.pdfUrl ? item.pdfUrl.split('?')[0] : index}`} className={`flex w-full mb-4 ${item.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+        {/* Centered message container */}
+        <div className="w-full max-w-7xl space-y-4">
+          {/* Render messages or placeholder */}
+          {active && conversation.length > 0 && conversation.map((item, index) => (
+            <div key={`msg-${index}-${item.from}-${item.pdfUrl ? item.pdfUrl.split('?')[0] : index}`} className={`flex w-full mb-4 ${item.from === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={cn(
               "max-w-3xl px-4 py-2 rounded break-words",
               item.from === 'user'
@@ -380,16 +382,17 @@ export const VanishInput = ({ services, setServices, active, setActive, initialC
             </div>
           </div>
         ))}
-        {!active && (
-          <div className="flex items-center justify-center h-full text-neutral-500 px-4 py-10 cursor-pointer" onClick={() => setActive(true)}>
-            {placeholder}
-          </div>
-        )}
-        {active && conversation.length === 0 && (
-          <div className="flex items-center justify-center h-full text-neutral-400 px-4">
-            Enter your message below...
-          </div>
-        )}
+          {!active && (
+            <div className="flex items-center justify-center h-full text-neutral-500 px-4 py-10 cursor-pointer" onClick={() => setActive(true)}>
+              {placeholder}
+            </div>
+          )}
+          {active && conversation.length === 0 && (
+            <div className="flex items-center justify-center h-full text-neutral-400 px-4">
+              Enter your message below...
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Input area - now part of the scroll flow, not sticky */}

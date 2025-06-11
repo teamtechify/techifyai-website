@@ -160,5 +160,50 @@ export const SERVICES = [
             },
         ]
     },
-    
+    {
+        icon: '/images/LEAD_GEN.png',
+        title: 'ai lead generation',
+        hook: 'Fills your pipeline. Filters buyers. Nonstop.',
+        description: `Your team wastes hours chasing cold leads… AI does it in minutes. Techify Lead Generation builds your pipeline without you lifting a finger, and increases pipeline volume by 60%. It filters leads, qualifies them, and reaches out to them for you.`,
+        cards: [
+            {
+                title: "Prospect Identification",
+                icon: '/images/services/PROSPECT_IDENTIFICATION.png',
+                description: ' The system identifies prospect behavior patterns, engagement triggers, and intent signals to feed your pipeline with people ready to pay you. It doesn’t just target prospects, it targets buyers.'
+            },
+            {
+                title: "Outreach",
+                icon: '/images/services/OUTREACH.png',
+                description: 'Techify launches outreach campaigns at scale. Thousands of high-quality leads reached out to on a daily basis without you lifting a finger.  Every message is timed, personalized, and built to get a reply.'
+            },
+            {
+                title: "Smarter Every Day",
+                icon: '/images/services/SMARTER.png',
+                description: 'Lead scoring, prioritization, and full-cycle optimization. The system gets sharper daily to ensure every lead it collects is a prospect ready to buy and pay you.'
+            },
+        ]
+    },
+    {
+        icon: '/images/SM_AUTOMATION.png',
+        title: 'social media automation',
+        hook: 'Posts. Replies. Closes. On every platform.',
+        description: `Your social media should be your biggest revenue generator. Techify automates your social media and turns it into a lead-gen machine by posting daily, replying immediately, and closing prospects in DMs. No team. No delays.`,
+        cards: [
+            {
+                title: "Output 24/7",
+                icon: '/images/services/OUTPUT_24_7.png',
+                description: 'It posts every day across all platforms with content designed to get replies, DMs, and eyeballs on your offer. '
+            },
+            {
+                title: "Instant Replies",
+                icon: '/images/services/INSTANT_REPLIES.png',
+                description: 'Every comment and DM is answered instantly. The system filters buyers, handles follow-ups, and closes qualified leads for you. It makes sure there are no missed deals. '
+            },
+            {
+                title: "Social Media Sales",
+                icon: '/images/services/SM_SALES.png',
+                description: 'The system tracks every lead, re-engages cold ones, and pushes them to take action. One Techify client booked 21 calls in 6 days. All off social, all automated.'
+            },
+        ]
+    },
 ]

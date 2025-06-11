@@ -69,6 +69,22 @@ table {
   border-bottom: 1px solid rgba(255,255,255,.03);
 }
 
+@keyframes spin {
+  0% { transform: rotate(0deg); } /* Start position */
+  100% { transform: rotate(360deg); } /* End position */
+}
+
+.loader {
+  border: 8px solid #f3f3f3; /* Light gray border */
+  border-top: 8px solid rgb(41, 41, 116); /* Blue top border */
+  top: calc(50% - 30px);
+  left: calc(50% - 30px);
+  border-radius: 50%; /* Make it round */
+  width: 60px; /* Width of the spinner */
+  height: 60px; /* Height of the spinner */
+  animation: spin 1s linear infinite; /* Animation effect */
+}
+
 table thead td{
   color: rgb(136, 142, 147);
   font-size: 14px;
