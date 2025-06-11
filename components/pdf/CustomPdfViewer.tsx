@@ -6,7 +6,7 @@ import ScrollContainer from 'react-indiana-drag-scroll';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { Button } from "@/components/ui/button"; // Assuming you have a Button component
-import { ZoomInIcon, ZoomOutIcon, DownloadIcon, ChevronLeftIcon, ChevronRightIcon, RotateCcwIcon } from 'lucide-react'; // Added RotateCcwIcon
+import { DownloadIcon, ChevronLeftIcon, ChevronRightIcon, Plus, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils'; // Import cn for conditional classnames
 
 // Configure PDF.js worker
@@ -349,17 +349,22 @@ export function CustomPdfViewer({ pdfUrl, onClose }: CustomPdfViewerProps) {
         {/* Zoom controls */}
         <div className="flex items-center gap-x-1"> {/* Reduced inner gap */}
           <Button variant="ghost" size="icon" onClick={zoomOut} className="text-white hover:text-blue-300">
-            <ZoomOutIcon className="h-5 w-5" />
+            <Minus className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={resetZoom} className="text-white hover:text-blue-300">
-            <RotateCcwIcon className="h-5 w-5" />
+          <Button variant="ghost" size="icon" onClick={resetZoom} className="text-white hover:text-blue-300" title="Reset zoom to 100%">
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="M21 21l-4.35-4.35"/>
+              <path d="M11 8v6"/>
+              <path d="M8 11h6"/>
+            </svg>
+          </Button>
+          <Button variant="ghost" size="icon" onClick={zoomIn} className="text-white hover:text-blue-300">
+            <Plus className="h-5 w-5" />
           </Button>
           <span className="text-sm tabular-nums w-12 text-center">
             {Math.round((pageContentScale / BASE_SCALE) * 100)}%
           </span>
-          <Button variant="ghost" size="icon" onClick={zoomIn} className="text-white hover:text-blue-300">
-            <ZoomInIcon className="h-5 w-5" />
-          </Button>
         </div>
         
         {/* Download button */}

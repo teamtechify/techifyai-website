@@ -4,9 +4,9 @@ import Pusher from 'pusher';
 
 // Validate environment variables during initialization
 const appId = process.env.PUSHER_APP_ID;
-const key = process.env.PUSHER_KEY; // Server Key
+const key = process.env.NEXT_PUBLIC_PUSHER_KEY; // Use the same key as frontend for consistency
 const secret = process.env.PUSHER_SECRET;
-const cluster = process.env.PUSHER_CLUSTER;
+const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER; // Use the same cluster as frontend for consistency
 
 if (!appId || !key || !secret || !cluster) {
   console.error("FATAL ERROR: Pusher environment variables are not fully configured!");
