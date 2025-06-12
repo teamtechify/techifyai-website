@@ -62,7 +62,7 @@ export const StatsSection = () => {
                 </h3>
                 <p className=" uppercase text-[16px] text-green-300">saved for businesses</p>
                 <p className="text-text-secondary text-[12px] capitalize">
-                  through techify.AI
+                  Through Techify AI
                 </p>
               </div>
             </Card>
