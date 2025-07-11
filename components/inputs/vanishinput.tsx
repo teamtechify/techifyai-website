@@ -288,7 +288,7 @@ export const VanishInput = ({ services, setServices, active, setActive, initialC
             const urlWithId = `${eventDocumentURL}${eventDocumentURL.includes('?') ? '&' : '?'}t=${Date.now()}`;
             setConversation(prev => [
               ...prev,
-              { from: 'ai', message: `A new document is ready: ${data.documentId || 'View PDF'}`, pdfUrl: urlWithId }
+              { from: 'ai', message: `Your AI Blueprint is ready:`, pdfUrl: urlWithId }
             ]);
             scrollToBottom();
           } else {
