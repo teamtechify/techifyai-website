@@ -140,6 +140,7 @@ export const VanishInput = ({ services, setServices, active, setActive, initialC
     setLoading(true);
     
     // --- BEGIN TEST PDF MODIFICATION ---
+    /*
     if (message.trim().toLowerCase() === "testpdf") {
       console.log("TESTPDF keyword detected. Displaying test PDF.");
       setConversation(prev => [
@@ -154,6 +155,7 @@ export const VanishInput = ({ services, setServices, active, setActive, initialC
       scrollToBottom();
       return; // Skip Voiceflow call
     }
+      */
     // --- END TEST PDF MODIFICATION ---
 
     setConversation(prev => [...prev, { from: 'ai', message: '...Nova is writing a response' }]);
