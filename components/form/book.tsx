@@ -58,8 +58,6 @@ export const BookFormComponent = ({ close }: { close: Function }) => {
                     name,
                     email,
                     start: slotTime,
-                    locationOption: "Virtual",
-                    locationValue: "https://zoom.us/my/yourroom",
                     timeZone: userTimeZone,
                     language: "English",
                     services: "techify.xyz"

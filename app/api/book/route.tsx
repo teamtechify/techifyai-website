@@ -19,11 +19,7 @@ export async function POST(req: NextRequest) {
     language: body.language ?? 'English',
     responses: {
       name: body.name,
-      email: body.email,
-      location: {
-        optionValue: body.locationOption ?? 'House',
-        value: body.locationValue ?? 'www.google.com'
-      },
+      email: body.email
     },
     metadata: {
       InterestedServices: body.services ?? 'unspecified'
